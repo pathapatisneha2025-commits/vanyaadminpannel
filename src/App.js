@@ -1,25 +1,44 @@
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import VanyaLayout from "./component/VanyaLayout";
+import AdminProductManager from "./Pages/ProductInventory";
+import AdminOrders from "./Pages/AdminOrders";
+import AdminDashboard from "./Pages/AdminDashboard";
+import AdminContactPage from "./Pages/AdminContactPage";
+import AddCouponForm from "./Pages/AdminCoupons";
+import AdminLoginPage from "./Pages/AdminLoginPage";
 
-function App() {
+export default function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <BrowserRouter>
+      <Routes>
+
+        {/* Redirect root */}
+        <Route path="/" element={<Navigate to="/admin" />} />
+            <Route path="login" element={<AdminLoginPage />} />
+
+        {/* Admin layout */}
+        <Route path="/admin" element={<VanyaLayout />}>
+          
+          {/* Default dashboard */}
+          <Route index element={<div>Dashboard Page</div>} />
+
+          {/* Products page */}
+
+          <Route path="products" element={<AdminProductManager />} />
+           <Route path="orders" element={<AdminOrders />} />
+            <Route path="dashboard" element={<AdminDashboard/>} />
+             <Route path="contact" element={<AdminContactPage/>} />
+           <Route path="coupons" element={<AddCouponForm/>} />
+
+
+
+
+
+        </Route>
+
+        {/* 404 */}
+        <Route path="*" element={<div>404 - Page Not Found</div>} />
+      </Routes>
+    </BrowserRouter>
   );
 }
-
-export default App;
