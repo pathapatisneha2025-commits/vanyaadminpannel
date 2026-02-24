@@ -7,7 +7,7 @@ const AdminContactPage = () => {
   // Fetch all contact messages
   const fetchMessages = async () => {
     try {
-      const res = await fetch('http://localhost:5000/contact'); // GET all messages
+      const res = await fetch('https://vanyabackenddatabase.onrender.com/contact/all'); // GET all messages
       const data = await res.json();
       setMessages(data);
     } catch (err) {
