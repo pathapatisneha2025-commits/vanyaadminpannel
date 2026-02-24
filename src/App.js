@@ -20,7 +20,7 @@ export default function App() {
         <Route path="/admin" element={<VanyaLayout />}>
           
           {/* Default dashboard */}
-          <Route index element={<div>Dashboard Page</div>} />
+          {/* <Route index element={<div>Dashboard Page</div>} /> */}
 
           {/* Products page */}
 
