@@ -13,7 +13,7 @@ export default function App() {
       <Routes>
 
         {/* Redirect root */}
-        <Route path="/" element={<Navigate to="/admin" />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="login" element={<AdminLoginPage />} />
 
         {/* Admin layout */}
