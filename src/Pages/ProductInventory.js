@@ -40,6 +40,15 @@ const adminStyles = `
 
 const API_URL = "https://vanyabackenddatabase.onrender.com/products";
 
+// --- Sub-categories mapping ---
+const subCategoriesMap = {
+  "SILK SAREES": ["Chiffons", "Jeorget", "Marshmellow", "Kashmiri Silk"],
+  "COTTON Sarees": ["Malaii Cotton", "2 cut cotton sarees", "Kalankari", "Meena Cotton", "Kota Cotton", "Mangalagiri Cotton", "Vimal Cotton"],
+  "Wedding Collections": ["Russian Collection", "Benarus", "Raw Mango", "Pure Tussar", "Kantha Work", "Chinia Jeroget", "Mushroom Silk", "Spacework", "Mysore Crepe", "Khadi Jeorget", "HO Crepe", "Digital Prints", "Pattu", "Maheswari Silk"],
+  "DesignerSarees": [],
+  "PartyWear": []
+};
+
 export default function AdminProductManager() {
   const [products, setProducts] = useState([]);
   const [isModalOpen, setModalOpen] = useState(false);
@@ -48,7 +57,8 @@ export default function AdminProductManager() {
   const [formData, setFormData] = useState({
     name: '',
     cat: 'SILK SAREES',
-    type: 'New Arrival',   // <-- NEW
+    subCat: '',          // new field for sub-category
+    type: 'New Arrival',
     price: '',
     oldPrice: '',
     discount: '',
@@ -59,11 +69,6 @@ export default function AdminProductManager() {
     thumbnailFiles: []
   });
 
-  const calculateDiscount = (price, oldPrice) => {
-    if (!price || !oldPrice) return 0;
-    return Math.round(((oldPrice - price) / oldPrice) * 100);
-  };
-
   useEffect(() => { fetchProducts(); }, []);
 
   const fetchProducts = async () => {
@@ -73,40 +78,43 @@ export default function AdminProductManager() {
       setProducts(data);
     } catch (err) { console.error("Error fetching products:", err); }
   };
-const handleOpenModal = (product = null) => {
-  if (product) {
-    setCurrentProduct(product);
-    setFormData({
-      name: product.name || '',
-      cat: product.category && product.category !== 'undefined' ? product.category : 'SILK SAREES', 
-      type: product.type || 'New Arrival',
-      price: Number(product.price) || '',
-      oldPrice: Number(product.old_price) || '',
-      discount: Number(product.discount) || 0,
-      stock: product.stock || '',
-      img: product.img_url || '',
-      thumbnails: product.thumbnails || [],
-      imgFile: null,
-      thumbnailFiles: []
-    });
-  } else {
-    setCurrentProduct(null);
-    setFormData({
-      name: '',
-      cat: 'SILK SAREES',
-      type: 'New Arrival',
-      price: '',
-      oldPrice: '',
-      discount: '',
-      stock: '',
-      img: '',
-      thumbnails: [],
-      imgFile: null,
-      thumbnailFiles: []
-    });
-  }
-  setModalOpen(true);
-};
+
+  const handleOpenModal = (product = null) => {
+    if (product) {
+      setCurrentProduct(product);
+      setFormData({
+        name: product.name || '',
+        cat: product.category || 'SILK SAREES',
+        subCat: product.subCategory || '',
+        type: product.type || 'New Arrival',
+        price: Number(product.price) || '',
+        oldPrice: Number(product.old_price) || '',
+        discount: Number(product.discount) || 0,
+        stock: product.stock || '',
+        img: product.img_url || '',
+        thumbnails: product.thumbnails || [],
+        imgFile: null,
+        thumbnailFiles: []
+      });
+    } else {
+      setCurrentProduct(null);
+      setFormData({
+        name: '',
+        cat: 'SILK SAREES',
+        subCat: '',
+        type: 'New Arrival',
+        price: '',
+        oldPrice: '',
+        discount: '',
+        stock: '',
+        img: '',
+        thumbnails: [],
+        imgFile: null,
+        thumbnailFiles: []
+      });
+    }
+    setModalOpen(true);
+  };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return;
@@ -120,7 +128,8 @@ const handleOpenModal = (product = null) => {
       const form = new FormData();
       form.append("name", formData.name);
       form.append("cat", formData.cat);
-      form.append("type", formData.type);  // <-- NEW
+      form.append("subCategory", formData.subCat);  // send sub-category
+      form.append("type", formData.type);
       form.append("price", formData.price);
       form.append("oldPrice", formData.oldPrice);
       form.append("discount", formData.discount);
@@ -171,7 +180,8 @@ const handleOpenModal = (product = null) => {
               <th>Thumbnails</th>
               <th>Product Details</th>
               <th>Category</th>
-              <th>Type</th> {/* NEW COLUMN */}
+              <th>Sub-Category</th>
+              <th>Type</th>
               <th>Price (Current)</th>
               <th>Discount</th>
               <th>Stock</th>
@@ -192,7 +202,8 @@ const handleOpenModal = (product = null) => {
                   <div style={{ fontSize: '0.75rem', color: '#999' }}>ID: #{p.id}</div>
                 </td>
                 <td><span className="status-badge">{p.category}</span></td>
-                <td><span className="status-badge">{p.type || 'Regular'}</span></td> {/* NEW */}
+                <td><span className="status-badge">{p.sub_category || '-'}</span></td>
+                <td><span className="status-badge">{p.type || 'Regular'}</span></td>
                 <td>
                   <div style={{ color: 'var(--accent-gold)', fontWeight: 'bold' }}>₹{Number(p.price).toLocaleString()}</div>
                   <div style={{ fontSize: '0.8rem', textDecoration: 'line-through', color: '#ccc' }}>₹{Number(p.old_price).toLocaleString()}</div>
@@ -225,12 +236,18 @@ const handleOpenModal = (product = null) => {
 
               <div className="form-group">
                 <label>Category</label>
-                <select value={formData.cat} onChange={e => setFormData({...formData,cat:e.target.value})}>
-                  <option>SILK SAREES</option>
-                  <option>DesignerSarees</option>
-                  <option>Wedding Collections</option>
-                  <option>COTTON Sarees</option>
-                  <option>PartyWear</option>
+                <select value={formData.cat} onChange={e => setFormData({...formData,cat:e.target.value, subCat: ''})}>
+                  {Object.keys(subCategoriesMap).map(cat => <option key={cat}>{cat}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Sub-Category</label>
+                <select value={formData.subCat} onChange={e => setFormData({...formData, subCat: e.target.value})}>
+                  <option value="">Select Sub-Category</option>
+                  {(subCategoriesMap[formData.cat] || []).map(sub => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
                 </select>
               </div>
 
@@ -243,7 +260,6 @@ const handleOpenModal = (product = null) => {
                 </select>
               </div>
 
-              {/* Current Price & MRP */}
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Current Price (₹)</label>
