@@ -20,7 +20,7 @@ const AddCouponForm = () => {
 
  const fetchCoupons = async () => {
   try {
-    const res = await fetch("https://vanyabackenddatabase.onrender.com/cart/coupons/all");
+    const res = await fetch("https://vanyabackenddatabase-vahr.onrender.com/cart/coupons/all");
     const data = await res.json();
     if (res.ok && data.success) setCoupons(data.coupons); // <- use data.coupons
   } catch (err) {
@@ -40,7 +40,7 @@ const AddCouponForm = () => {
     e.preventDefault();
 
     try {
-      const res = await fetch("https://vanyabackenddatabase.onrender.com/cart/add/coupons", {
+      const res = await fetch("https://vanyabackenddatabase-vahr.onrender.com/cart/add/coupons", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -68,6 +68,10 @@ const AddCouponForm = () => {
       alert(err.message);
     }
   };
+  const formatDate = (date) => {
+  if (!date) return "-";
+  return new Date(date).toISOString().split("T")[0];
+};
 
   return (
     <div style={styles.container}>
@@ -123,7 +127,7 @@ const AddCouponForm = () => {
               <td>{c.category_name || "-"}</td>
               <td>{c.product_id || "-"}</td>
               <td>{c.min_amount}</td>
-              <td>{c.expiry_date || "-"}</td>
+<td>{formatDate(c.expiry_date)}</td>
               <td>{c.is_active ? "Yes" : "No"}</td>
             </tr>
           ))}

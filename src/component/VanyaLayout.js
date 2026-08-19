@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 
+
 const VanyaLayout = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false); // start closed on mobile
   const navigate = useNavigate();
@@ -63,6 +64,14 @@ const VanyaLayout = () => {
   >
     💳 Coupons
   </Link>
+ <Link 
+  to="/admin/onlinepaymentssettings" 
+  style={styles.navItem} 
+  onClick={() => isMobile && setSidebarOpen(false)}
+>
+  <span style={{ marginRight: '10px', fontSize: '18px' }}>▦</span>
+  QR Code Settings
+</Link>
   <Link 
     to="/admin/contact" 
     style={styles.navItem} 

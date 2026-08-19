@@ -6,6 +6,7 @@ import AdminDashboard from "./Pages/AdminDashboard";
 import AdminContactPage from "./Pages/AdminContactPage";
 import AddCouponForm from "./Pages/AdminCoupons";
 import AdminLoginPage from "./Pages/AdminLoginPage";
+import OnlinePaymentSettings from "./Pages/OnlinePaymentSettings";
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="dashboard" element={<AdminDashboard/>} />
              <Route path="contact" element={<AdminContactPage/>} />
            <Route path="coupons" element={<AddCouponForm/>} />
+           <Route path="onlinepaymentssettings" element={<OnlinePaymentSettings/>} />
 
 
 
