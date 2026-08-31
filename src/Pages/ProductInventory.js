@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from "react";
-
+import React, { useState, useEffect, useRef } from "react";
+import * as XLSX from "xlsx";
 // ============================================================
 // API
 // ============================================================
+
 const API_URL =
   "https://vanyabackenddatabase-vahr.onrender.com/products";
 
 // ============================================================
 // STYLES
 // ============================================================
+
 const adminStyles = `
   :root {
     --primary-green: #1a3c34;
@@ -22,6 +24,8 @@ const adminStyles = `
     --danger: #ff5252;
     --border: #e5e5e5;
     --success: #2e7d32;
+    --blue: #2563eb;
+    --blue-hover: #1d4ed8;
   }
 
   * {
@@ -64,26 +68,55 @@ const adminStyles = `
     font-size: 0.95rem;
   }
 
-  .btn-add {
-    background: var(--primary-green);
+  .header-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .btn-add,
+  .btn-bulk,
+  .btn-export {
     color: white;
     border: none;
-    padding: 12px 20px;
+    padding: 12px 18px;
     border-radius: 8px;
     cursor: pointer;
     font-weight: 600;
-    font-size: 0.95rem;
-    box-shadow: 0 4px 10px rgba(26, 60, 52, 0.2);
+    font-size: 0.92rem;
     transition: background 0.2s, transform 0.1s;
     white-space: nowrap;
   }
 
-  .btn-add:active {
-    transform: scale(0.98);
+  .btn-add {
+    background: var(--primary-green);
   }
 
   .btn-add:hover {
     background: var(--primary-green-hover);
+  }
+
+  .btn-bulk {
+    background: var(--blue);
+  }
+
+  .btn-bulk:hover {
+    background: var(--blue-hover);
+  }
+
+  .btn-export {
+    background: #64748b;
+  }
+
+  .btn-export:hover {
+    background: #475569;
+  }
+
+  .btn-add:active,
+  .btn-bulk:active,
+  .btn-export:active {
+    transform: scale(0.98);
   }
 
   .btn-small {
@@ -193,23 +226,11 @@ const adminStyles = `
     color: var(--accent-gold);
   }
 
-  .btn-edit:hover {
-    background: rgba(197, 160, 89, 0.08);
-  }
-
   .btn-delete {
     background: none;
     border: 1px solid var(--danger);
     color: var(--danger);
   }
-
-  .btn-delete:hover {
-    background: rgba(255, 82, 82, 0.08);
-  }
-
-  /* ============================================================
-     VARIANT DISPLAY
-  ============================================================ */
 
   .variant-summary {
     display: flex;
@@ -244,15 +265,11 @@ const adminStyles = `
     font-size: 0.72rem;
   }
 
-  .variant-price {
-    font-weight: 700;
-    color: var(--accent-gold);
-  }
-
-  .variant-stock {
-    color: var(--success);
-    font-size: 0.78rem;
-    font-weight: 600;
+  .variant-images-mini {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 5px;
   }
 
   .variant-image-mini {
@@ -261,13 +278,6 @@ const adminStyles = `
     object-fit: cover;
     border-radius: 5px;
     border: 1px solid #ddd;
-  }
-
-  .variant-images-mini {
-    display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
-    margin-top: 5px;
   }
 
   /* ============================================================
@@ -297,6 +307,10 @@ const adminStyles = `
     box-shadow: 0 10px 30px rgba(0,0,0,0.15);
   }
 
+  .bulk-modal {
+    width: 1100px;
+  }
+
   .form-group {
     margin-bottom: 16px;
   }
@@ -306,7 +320,6 @@ const adminStyles = `
     margin-bottom: 6px;
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--text-dark);
   }
 
   .form-group input,
@@ -318,12 +331,6 @@ const adminStyles = `
     outline: none;
     font-size: 0.95rem;
     background: #fff;
-    transition: border-color 0.2s;
-  }
-
-  .form-group input:focus,
-  .form-group select:focus {
-    border-color: var(--primary-green);
   }
 
   .modal-actions {
@@ -333,14 +340,6 @@ const adminStyles = `
     margin-top: 24px;
     padding-top: 16px;
     border-top: 1px solid var(--border);
-  }
-
-  .thumbnail-preview {
-    width: 55px;
-    height: 55px;
-    object-fit: cover;
-    border-radius: 6px;
-    border: 1px solid var(--border);
   }
 
   /* ============================================================
@@ -400,10 +399,6 @@ const adminStyles = `
   .colour-card-body {
     padding: 14px;
   }
-
-  /* ============================================================
-     COLOUR IMAGE SECTION
-  ============================================================ */
 
   .colour-image-section {
     margin-bottom: 18px;
@@ -481,12 +476,6 @@ const adminStyles = `
     padding: 0;
   }
 
-  .existing-image-label {
-    font-size: 0.68rem;
-    color: #888;
-    margin-top: 3px;
-  }
-
   .size-table-wrapper {
     overflow-x: auto;
   }
@@ -502,12 +491,6 @@ const adminStyles = `
     padding: 8px;
     border: 1px solid var(--border);
     font-size: 0.78rem;
-  }
-
-  .size-table th {
-    background: #fafafa;
-    text-transform: none;
-    letter-spacing: 0;
   }
 
   .size-table input {
@@ -569,19 +552,6 @@ const adminStyles = `
     font-weight: 700;
   }
 
-  .add-colour-button:hover {
-    background: #f8f3e8;
-  }
-
-  .empty-variants {
-    padding: 18px;
-    text-align: center;
-    color: var(--text-muted);
-    border: 1px dashed var(--border);
-    border-radius: 8px;
-    margin-bottom: 12px;
-  }
-
   .info-box {
     background: #eef7f4;
     border: 1px solid #cde3dc;
@@ -593,6 +563,604 @@ const adminStyles = `
   }
 
   /* ============================================================
+     BULK IMPORT
+  ============================================================ */
+
+/* =========================================================
+   BULK MODAL
+========================================================= */
+
+.bulk-modal {
+  width: min(900px, 94vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 0;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.bulk-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 28px 18px;
+  border-bottom: 1px solid #eef1f4;
+}
+
+.bulk-modal-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 750;
+  color: var(--primary-green);
+}
+
+.bulk-modal-subtitle {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.bulk-close-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 9px;
+  background: #f5f6f7;
+  color: #475569;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.bulk-close-btn:hover {
+  background: #eceff1;
+}
+
+
+/* =========================================================
+   UPLOAD AREA
+========================================================= */
+
+.bulk-upload-wrapper {
+  padding: 24px 28px 10px;
+}
+
+.bulk-upload-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  min-height: 210px;
+
+  box-sizing: border-box;
+
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 14px;
+
+  background: #fafbfc;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.bulk-upload-area:hover {
+  border-color: var(--primary-green);
+  background: #f8faf9;
+}
+
+.bulk-upload-area.bulk-upload-selected {
+  border-color: var(--primary-green);
+  background: #f7fbf8;
+}
+
+.bulk-upload-area input {
+  display: none;
+}
+
+
+/* =========================================================
+   UPLOAD ICON
+========================================================= */
+
+.bulk-upload-icon {
+  width: 58px;
+  height: 58px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-bottom: 12px;
+
+  border-radius: 14px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.07);
+
+  font-size: 28px;
+}
+
+
+/* =========================================================
+   UPLOAD TEXT
+========================================================= */
+
+.bulk-upload-main-text {
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.bulk-upload-sub-text {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.bulk-upload-format {
+  margin-top: 12px;
+
+  padding: 5px 10px;
+
+  border-radius: 20px;
+
+  background: #eef2f4;
+
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+
+/* =========================================================
+   SELECTED FILE
+========================================================= */
+
+.bulk-selected-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+
+  margin: 12px 28px 0;
+  padding: 12px 14px;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+
+  background: #ffffff;
+}
+
+.bulk-selected-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.bulk-selected-icon {
+  width: 38px;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 9px;
+  background: #f1f5f9;
+
+  font-size: 20px;
+}
+
+.bulk-selected-name {
+  max-width: 500px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-size: 13px;
+  font-weight: 650;
+  color: #1e293b;
+}
+
+.bulk-selected-status {
+  margin-top: 3px;
+  font-size: 11px;
+  color: #16a34a;
+}
+
+.bulk-remove-file {
+  border: none;
+  background: transparent;
+
+  color: #dc2626;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.bulk-remove-file:hover {
+  text-decoration: underline;
+}
+
+
+/* =========================================================
+   PREVIEW
+========================================================= */
+
+.bulk-preview-section {
+  margin: 20px 28px 0;
+}
+
+.bulk-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 10px;
+}
+
+.bulk-preview-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.bulk-preview-count {
+  margin-top: 3px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.bulk-preview-badge {
+  padding: 6px 10px;
+
+  border-radius: 20px;
+
+  background: #f1f5f9;
+
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+}
+
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.bulk-preview {
+  width: 100%;
+  overflow-x: auto;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.bulk-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.bulk-preview th {
+  padding: 10px 12px;
+
+  text-align: left;
+  white-space: nowrap;
+
+  background: #f8fafc;
+
+  border-bottom: 1px solid #e2e8f0;
+
+  font-weight: 700;
+  color: #334155;
+}
+
+.bulk-preview td {
+  padding: 9px 12px;
+
+  max-width: 180px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  border-bottom: 1px solid #f1f5f9;
+
+  color: #475569;
+}
+
+.bulk-preview tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.bulk-preview tbody tr:hover {
+  background: #fafafa;
+}
+
+.bulk-preview-note {
+  margin-top: 7px;
+
+  font-size: 11px;
+  color: #64748b;
+}
+
+
+/* =========================================================
+   PROGRESS
+========================================================= */
+
+.bulk-progress-section {
+  margin: 20px 28px 0;
+}
+
+.bulk-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 8px;
+
+  font-size: 12px;
+  color: #475569;
+}
+
+.bulk-progress-header strong {
+  color: var(--primary-green);
+}
+
+.bulk-progress {
+  width: 100%;
+  height: 8px;
+
+  overflow: hidden;
+
+  border-radius: 10px;
+
+  background: #e2e8f0;
+}
+
+.bulk-progress-bar {
+  height: 100%;
+
+  border-radius: 10px;
+
+  background: var(--primary-green);
+
+  transition: width 0.3s ease;
+}
+
+
+/* =========================================================
+   RESULT
+========================================================= */
+
+.bulk-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  margin: 18px 28px 0;
+  padding: 12px 14px;
+
+  border-radius: 9px;
+
+  background: #f0fdf4;
+
+  border: 1px solid #bbf7d0;
+
+  color: #15803d;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bulk-result-icon {
+  width: 24px;
+  height: 24px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: #dcfce7;
+
+  font-weight: 800;
+}
+
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.bulk-error {
+  margin: 18px 28px 0;
+  padding: 13px 15px;
+
+  border-radius: 9px;
+
+  background: #fff7f7;
+
+  border: 1px solid #fecaca;
+
+  color: #b91c1c;
+
+  font-size: 12px;
+}
+
+.bulk-error-title {
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+
+.bulk-error ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.bulk-error li {
+  margin-bottom: 4px;
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.bulk-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+
+  margin-top: 24px;
+  padding: 18px 28px;
+
+  border-top: 1px solid #eef1f4;
+
+  background: #ffffff;
+}
+
+.bulk-cancel-btn {
+  padding: 10px 18px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #f1f5f9;
+
+  color: #475569;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.bulk-cancel-btn:hover {
+  background: #e2e8f0;
+}
+
+.bulk-import-btn {
+  padding: 10px 20px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: var(--primary-green);
+
+  color: #ffffff;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: opacity 0.2s ease;
+}
+
+.bulk-import-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.bulk-import-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 600px) {
+
+  .bulk-modal {
+    width: 95vw;
+    max-height: 92vh;
+    border-radius: 14px;
+  }
+
+  .bulk-modal-header {
+    padding: 18px;
+  }
+
+  .bulk-modal-title {
+    font-size: 18px;
+  }
+
+  .bulk-upload-wrapper {
+    padding: 18px 18px 8px;
+  }
+
+  .bulk-upload-area {
+    min-height: 180px;
+  }
+
+  .bulk-selected-file {
+    margin-left: 18px;
+    margin-right: 18px;
+  }
+
+  .bulk-preview-section {
+    margin-left: 18px;
+    margin-right: 18px;
+  }
+
+  .bulk-progress-section {
+    margin-left: 18px;
+    margin-right: 18px;
+  }
+
+  .bulk-result,
+  .bulk-error {
+    margin-left: 18px;
+    margin-right: 18px;
+  }
+
+  .bulk-modal-footer {
+    padding: 15px 18px;
+  }
+
+  .bulk-selected-name {
+    max-width: 180px;
+  }
+
+  .bulk-import-btn {
+    padding: 10px 14px;
+  }
+
+}
+  /* ============================================================
      MOBILE
   ============================================================ */
 
@@ -601,6 +1169,7 @@ const adminStyles = `
   }
 
   @media (max-width: 768px) {
+
     .admin-container {
       padding: 16px 12px;
     }
@@ -608,19 +1177,17 @@ const adminStyles = `
     .admin-header {
       flex-direction: column;
       align-items: stretch;
-      text-align: left;
-      gap: 12px;
     }
 
-    .admin-header h1 {
-      font-size: 1.5rem;
+    .header-buttons {
+      display: grid;
+      grid-template-columns: 1fr;
     }
 
-    .btn-add {
+    .btn-add,
+    .btn-bulk,
+    .btn-export {
       width: 100%;
-      padding: 14px;
-      font-size: 1rem;
-      text-align: center;
     }
 
     .table-wrapper {
@@ -681,15 +1248,6 @@ const adminStyles = `
 
     .card-field span {
       font-weight: 600;
-      color: var(--text-dark);
-    }
-
-    .card-thumbnails-row {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      padding-bottom: 4px;
-      margin-bottom: 12px;
     }
 
     .card-actions {
@@ -702,7 +1260,6 @@ const adminStyles = `
     .card-actions button {
       flex: 1;
       padding: 10px;
-      font-size: 0.9rem;
     }
 
     .modal-overlay {
@@ -722,10 +1279,6 @@ const adminStyles = `
 
     .saree-variant-row {
       grid-template-columns: 1fr 1fr;
-    }
-
-    .colour-name-input {
-      max-width: none;
     }
 
     .image-upload-grid {
@@ -849,10 +1402,6 @@ const calculateDiscount = (price, oldPrice) => {
   return Math.round(((op - p) / op) * 100);
 };
 
-// ============================================================
-// CREATE EMPTY COLOUR
-// ============================================================
-
 const createEmptyDressColour = () => ({
   colour: "",
 
@@ -862,7 +1411,7 @@ const createEmptyDressColour = () => ({
   thumbnails: [],
   thumbnailFiles: [],
 
-  sizes: DEFAULT_DRESS_SIZES.map((size) => ({
+  sizes: DEFAULT_DRESS_SIZES.map(size => ({
     size,
     price: "",
     oldPrice: "",
@@ -886,11 +1435,7 @@ const createEmptySareeColour = () => ({
   thumbnailFiles: []
 });
 
-// ============================================================
-// NORMALIZE VARIANTS
-// ============================================================
-
-const normalizeVariants = (product) => {
+const normalizeVariants = product => {
   if (Array.isArray(product?.variants)) {
     return product.variants;
   }
@@ -902,20 +1447,11 @@ const normalizeVariants = (product) => {
       if (Array.isArray(parsed)) {
         return parsed;
       }
-    } catch (error) {
-      console.warn(
-        "Unable to parse variants:",
-        error
-      );
-    }
+    } catch {}
   }
 
   return [];
 };
-
-// ============================================================
-// NORMALIZE VARIANT IMAGES
-// ============================================================
 
 const normalizeVariantForEdit = (
   variant,
@@ -950,7 +1486,7 @@ const normalizeVariantForEdit = (
       thumbnailFiles: [],
 
       sizes: Array.isArray(variant.sizes)
-        ? variant.sizes.map((size) => ({
+        ? variant.sizes.map(size => ({
             size: size.size || "",
             price: size.price ?? "",
             oldPrice:
@@ -961,15 +1497,13 @@ const normalizeVariantForEdit = (
               size.discount ?? 0,
             stock: size.stock ?? ""
           }))
-        : DEFAULT_DRESS_SIZES.map(
-            (size) => ({
-              size,
-              price: "",
-              oldPrice: "",
-              discount: 0,
-              stock: ""
-            })
-          )
+        : DEFAULT_DRESS_SIZES.map(size => ({
+            size,
+            price: "",
+            oldPrice: "",
+            discount: 0,
+            stock: ""
+          }))
     };
   }
 
@@ -1000,42 +1534,321 @@ const normalizeVariantForEdit = (
 };
 
 // ============================================================
+// CSV HELPERS
+// ============================================================
+
+const parseCSVLine = line => {
+  const result = [];
+  let current = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      if (
+        insideQuotes &&
+        line[i + 1] === '"'
+      ) {
+        current += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (
+      char === "," &&
+      !insideQuotes
+    ) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  result.push(current.trim());
+
+  return result;
+};
+
+const parseCSV = text => {
+  const lines = text
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .filter(line => line.trim());
+
+  if (!lines.length) {
+    return [];
+  }
+
+  const headers = parseCSVLine(lines[0]).map(
+    header =>
+      header
+        .trim()
+        .replace(/^"|"$/g, "")
+        .toLowerCase()
+  );
+
+  return lines.slice(1).map(line => {
+    const values = parseCSVLine(line);
+
+    const row = {};
+
+    headers.forEach((header, index) => {
+      row[header] =
+        values[index] !== undefined
+          ? values[index]
+          : "";
+    });
+
+    return row;
+  });
+};
+
+const csvEscape = value => {
+  const stringValue =
+    value === null ||
+    value === undefined
+      ? ""
+      : String(value);
+
+  return `"${stringValue.replace(
+    /"/g,
+    '""'
+  )}"`;
+};
+
+const downloadCSV = (
+  rows,
+  filename
+) => {
+  if (!rows.length) {
+    alert("No data available.");
+    return;
+  }
+
+  const headers = Object.keys(rows[0]);
+
+  const csv = [
+    headers.map(csvEscape).join(","),
+    ...rows.map(row =>
+      headers
+        .map(header =>
+          csvEscape(row[header])
+        )
+        .join(",")
+    )
+  ].join("\n");
+
+  const blob = new Blob(
+    [csv],
+    {
+      type: "text/csv;charset=utf-8;"
+    }
+  );
+
+  const url =
+    URL.createObjectURL(blob);
+
+  const link =
+    document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
+};
+// ============================================================
+// DOWNLOAD EXCEL TEMPLATE
+// ============================================================
+
+// ============================================================
+// DOWNLOAD SAMPLE CSV
+// ============================================================
+
+const downloadSampleCSV = () => {
+  const csvData = [
+    [
+      "name",
+      "category",
+      "sub_category",
+      "price",
+      "old_price",
+      "stock",
+      "type",
+      "img_url",
+    ],
+
+    [
+      "Fresh Red Apples",
+      "Fruits",
+      "Apple",
+      "120",
+      "150",
+      "50",
+      "Regular",
+      "https://example.com/apple.jpg",
+    ],
+
+    [
+      "Fresh Bananas",
+      "Fruits",
+      "Banana",
+      "60",
+      "75",
+      "100",
+      "Regular",
+      "https://example.com/banana.jpg",
+    ],
+
+    [
+      "Tata Salt",
+      "Grocery",
+      "Salt",
+      "25",
+      "30",
+      "80",
+      "Regular",
+      "https://example.com/salt.jpg",
+    ],
+
+    [
+      "Aashirvaad Atta 5kg",
+      "Grocery",
+      "Flour",
+      "280",
+      "320",
+      "40",
+      "Regular",
+      "https://example.com/atta.jpg",
+    ],
+
+    [
+      "Premium Almonds",
+      "Dry Fruits",
+      "Almonds",
+      "650",
+      "750",
+      "25",
+      "Premium",
+      "https://example.com/almonds.jpg",
+    ],
+  ];
+
+  // Convert rows into CSV
+  const csv = csvData
+    .map((row) =>
+      row
+        .map((value) => {
+          // Escape quotes and wrap values containing commas
+          const escaped = String(value).replace(/"/g, '""');
+          return `"${escaped}"`;
+        })
+        .join(",")
+    )
+    .join("\n");
+
+  // Create downloadable file
+  const blob = new Blob(
+    [csv],
+    {
+      type: "text/csv;charset=utf-8;",
+    }
+  );
+
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "sample_products_bulk_upload.csv";
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
+};
+// ============================================================
 // COMPONENT
 // ============================================================
 
 export default function AdminProductManager() {
-  const [products, setProducts] = useState([]);
+
+  const [products, setProducts] =
+    useState([]);
 
   const [isModalOpen, setModalOpen] =
+    useState(false);
+
+  const [isBulkModalOpen, setBulkModalOpen] =
     useState(false);
 
   const [currentProduct, setCurrentProduct] =
     useState(null);
 
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] =
+    useState(false);
 
   const [errorMessage, setErrorMessage] =
     useState("");
 
-  const [formData, setFormData] = useState({
-    name: "",
-    cat: "SILK SAREES",
-    subCat: "",
-    type: "New Arrival",
+  // ============================================================
+  // BULK STATES
+  // ============================================================
 
-    price: "",
-    oldPrice: "",
-    discount: "",
-    stock: "",
+  const [bulkRows, setBulkRows] =
+    useState([]);
 
-    img: "",
-    thumbnails: [],
+  const [bulkFileName, setBulkFileName] =
+    useState("");
 
-    imgFile: null,
-    thumbnailFiles: [],
+  const [bulkUploading, setBulkUploading] =
+    useState(false);
 
-    variants: []
-  });
+  const [bulkProgress, setBulkProgress] =
+    useState(0);
+
+  const [bulkResult, setBulkResult] =
+    useState("");
+
+  const [bulkErrors, setBulkErrors] =
+    useState([]);
+
+  const bulkFileRef = useRef(null);
+const [bulkUploadType, setBulkUploadType] = useState("");
+  // ============================================================
+  // FORM
+  // ============================================================
+
+  const [formData, setFormData] =
+    useState({
+      name: "",
+      cat: "SILK SAREES",
+      subCat: "",
+      type: "New Arrival",
+
+      price: "",
+      oldPrice: "",
+      discount: "",
+      stock: "",
+
+      img: "",
+      thumbnails: [],
+
+      imgFile: null,
+      thumbnailFiles: [],
+
+      variants: []
+    });
 
   // ============================================================
   // FETCH
@@ -1047,9 +1860,10 @@ export default function AdminProductManager() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch(
-        `${API_URL}/all`
-      );
+      const res =
+        await fetch(
+          `${API_URL}/all`
+        );
 
       if (!res.ok) {
         throw new Error(
@@ -1057,13 +1871,15 @@ export default function AdminProductManager() {
         );
       }
 
-      const data = await res.json();
+      const data =
+        await res.json();
 
       setProducts(
         Array.isArray(data)
           ? data
           : []
       );
+
     } catch (err) {
       console.error(err);
 
@@ -1080,6 +1896,7 @@ export default function AdminProductManager() {
   const resetForm = (
     category = "SILK SAREES"
   ) => {
+
     const dress =
       isDressCategory(category);
 
@@ -1115,9 +1932,11 @@ export default function AdminProductManager() {
   const handleOpenModal = (
     product = null
   ) => {
+
     setErrorMessage("");
 
     if (product) {
+
       setCurrentProduct(product);
 
       const rawVariants =
@@ -1134,78 +1953,76 @@ export default function AdminProductManager() {
           : [];
 
       if (!variants.length) {
+
         if (dress) {
-          variants = [
-            {
-              colour: "",
 
-              mainImage: "",
+          variants = [{
+            colour: "",
+            mainImage: "",
+            thumbnails: [],
+            sizes:
+              DEFAULT_DRESS_SIZES.map(
+                size => ({
+                  size,
+                  price:
+                    Number(
+                      product.price
+                    ) || "",
+                  oldPrice:
+                    Number(
+                      product.old_price
+                    ) || "",
+                  discount:
+                    Number(
+                      product.discount
+                    ) || 0,
+                  stock: ""
+                })
+              )
+          }];
 
-              thumbnails: [],
-
-              sizes:
-                DEFAULT_DRESS_SIZES.map(
-                  (size) => ({
-                    size,
-                    price:
-                      Number(
-                        product.price
-                      ) || "",
-                    oldPrice:
-                      Number(
-                        product.old_price
-                      ) || "",
-                    discount:
-                      Number(
-                        product.discount
-                      ) || 0,
-                    stock: ""
-                  })
-                )
-            }
-          ];
         } else {
-          variants = [
-            {
-              colour: "",
 
-              price:
-                Number(
-                  product.price
-                ) || "",
+          variants = [{
+            colour: "",
 
-              oldPrice:
-                Number(
-                  product.old_price
-                ) || "",
+            price:
+              Number(
+                product.price
+              ) || "",
 
-              discount:
-                Number(
-                  product.discount
-                ) || 0,
+            oldPrice:
+              Number(
+                product.old_price
+              ) || "",
 
-              stock:
-                product.stock || "",
+            discount:
+              Number(
+                product.discount
+              ) || 0,
 
-              mainImage: "",
+            stock:
+              product.stock || "",
 
-              thumbnails: []
-            }
-          ];
+            mainImage: "",
+            thumbnails: []
+          }];
         }
       }
 
       const normalizedVariants =
-        variants.map((variant) =>
-          normalizeVariantForEdit(
-            variant,
-            product,
-            dress
-          )
+        variants.map(
+          variant =>
+            normalizeVariantForEdit(
+              variant,
+              product,
+              dress
+            )
         );
 
       setFormData({
-        name: product.name || "",
+        name:
+          product.name || "",
 
         cat:
           product.category ||
@@ -1255,7 +2072,9 @@ export default function AdminProductManager() {
         variants:
           normalizedVariants
       });
+
     } else {
+
       setCurrentProduct(null);
 
       resetForm(
@@ -1266,17 +2085,48 @@ export default function AdminProductManager() {
     setModalOpen(true);
   };
 
+// ============================================================
+// RESET BULK UPLOAD STATE
+// ============================================================
+
+// ============================================================
+// RESET BULK UPLOAD
+// ============================================================
+
+const resetBulkUpload = type => {
+
+  setBulkRows([]);
+
+  setBulkFileName("");
+
+  setBulkErrors([]);
+
+  setBulkResult("");
+
+  setBulkProgress(0);
+
+  setBulkUploadType(type);
+
+  if (bulkFileRef.current) {
+    bulkFileRef.current.value = "";
+  }
+
+  setBulkModalOpen(true);
+};
+
+
+
+
   // ============================================================
-  // CATEGORY CHANGE
+  // CATEGORY
   // ============================================================
 
-  const handleCategoryChange = (
-    category
-  ) => {
+  const handleCategoryChange = category => {
+
     const dress =
       isDressCategory(category);
 
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
 
       cat: category,
@@ -1295,7 +2145,8 @@ export default function AdminProductManager() {
   // DELETE
   // ============================================================
 
-  const handleDelete = async (id) => {
+  const handleDelete = async id => {
+
     if (
       !window.confirm(
         "Are you sure you want to delete this product?"
@@ -1305,12 +2156,14 @@ export default function AdminProductManager() {
     }
 
     try {
-      const res = await fetch(
-        `${API_URL}/delete/${id}`,
-        {
-          method: "DELETE"
-        }
-      );
+
+      const res =
+        await fetch(
+          `${API_URL}/delete/${id}`,
+          {
+            method: "DELETE"
+          }
+        );
 
       if (!res.ok) {
         throw new Error(
@@ -1319,7 +2172,9 @@ export default function AdminProductManager() {
       }
 
       await fetchProducts();
+
     } catch (err) {
+
       console.error(err);
 
       alert(
@@ -1329,13 +2184,17 @@ export default function AdminProductManager() {
   };
 
   // ============================================================
-  // ADD COLOUR
+  // COLOUR
   // ============================================================
 
   const addColour = () => {
-    setFormData((prev) => {
+
+    setFormData(prev => {
+
       const dress =
-        isDressCategory(prev.cat);
+        isDressCategory(
+          prev.cat
+        );
 
       return {
         ...prev,
@@ -1351,15 +2210,13 @@ export default function AdminProductManager() {
     });
   };
 
-  // ============================================================
-  // REMOVE COLOUR
-  // ============================================================
+  const removeColour = index => {
 
-  const removeColour = (
-    colourIndex
-  ) => {
-    setFormData((prev) => {
-      if (prev.variants.length <= 1) {
+    setFormData(prev => {
+
+      if (
+        prev.variants.length <= 1
+      ) {
         alert(
           "At least one colour is required."
         );
@@ -1372,29 +2229,26 @@ export default function AdminProductManager() {
 
         variants:
           prev.variants.filter(
-            (_, index) =>
-              index !== colourIndex
+            (_, i) =>
+              i !== index
           )
       };
     });
   };
 
-  // ============================================================
-  // UPDATE COLOUR
-  // ============================================================
-
   const updateColourName = (
     index,
     value
   ) => {
-    setFormData((prev) => {
+
+    setFormData(prev => {
+
       const variants = [
         ...prev.variants
       ];
 
       variants[index] = {
         ...variants[index],
-
         colour: value
       };
 
@@ -1406,7 +2260,7 @@ export default function AdminProductManager() {
   };
 
   // ============================================================
-  // UPDATE SAREE
+  // SAREE VARIANT
   // ============================================================
 
   const updateSareeVariant = (
@@ -1414,7 +2268,9 @@ export default function AdminProductManager() {
     field,
     value
   ) => {
-    setFormData((prev) => {
+
+    setFormData(prev => {
+
       const variants = [
         ...prev.variants
       ];
@@ -1423,7 +2279,9 @@ export default function AdminProductManager() {
         ...variants[index]
       };
 
-      if (field === "price") {
+      if (
+        field === "price"
+      ) {
         current.price = value;
 
         current.discount =
@@ -1433,7 +2291,9 @@ export default function AdminProductManager() {
           );
       }
 
-      if (field === "oldPrice") {
+      if (
+        field === "oldPrice"
+      ) {
         current.oldPrice = value;
 
         current.discount =
@@ -1443,7 +2303,9 @@ export default function AdminProductManager() {
           );
       }
 
-      if (field === "discount") {
+      if (
+        field === "discount"
+      ) {
         current.discount = value;
 
         if (
@@ -1455,15 +2317,19 @@ export default function AdminProductManager() {
             Number(
               current.oldPrice
             ) -
-            (Number(
-              current.oldPrice
-            ) *
-              Number(value)) /
-              100;
+            (
+              Number(
+                current.oldPrice
+              ) *
+              Number(value)
+            ) /
+            100;
         }
       }
 
-      if (field === "stock") {
+      if (
+        field === "stock"
+      ) {
         current.stock = value;
       }
 
@@ -1478,7 +2344,7 @@ export default function AdminProductManager() {
   };
 
   // ============================================================
-  // UPDATE DRESS SIZE
+  // DRESS SIZE
   // ============================================================
 
   const updateDressSize = (
@@ -1487,13 +2353,17 @@ export default function AdminProductManager() {
     field,
     value
   ) => {
-    setFormData((prev) => {
+
+    setFormData(prev => {
+
       const variants = [
         ...prev.variants
       ];
 
       const colourVariant = {
-        ...variants[colourIndex]
+        ...variants[
+          colourIndex
+        ]
       };
 
       const sizes = [
@@ -1505,12 +2375,16 @@ export default function AdminProductManager() {
         ...sizes[sizeIndex]
       };
 
-      if (field === "size") {
+      if (
+        field === "size"
+      ) {
         currentSize.size =
           value.toUpperCase();
       }
 
-      if (field === "price") {
+      if (
+        field === "price"
+      ) {
         currentSize.price =
           value;
 
@@ -1521,7 +2395,9 @@ export default function AdminProductManager() {
           );
       }
 
-      if (field === "oldPrice") {
+      if (
+        field === "oldPrice"
+      ) {
         currentSize.oldPrice =
           value;
 
@@ -1532,7 +2408,9 @@ export default function AdminProductManager() {
           );
       }
 
-      if (field === "discount") {
+      if (
+        field === "discount"
+      ) {
         currentSize.discount =
           value;
 
@@ -1545,15 +2423,19 @@ export default function AdminProductManager() {
             Number(
               currentSize.oldPrice
             ) -
-            (Number(
-              currentSize.oldPrice
-            ) *
-              Number(value)) /
-              100;
+            (
+              Number(
+                currentSize.oldPrice
+              ) *
+              Number(value)
+            ) /
+            100;
         }
       }
 
-      if (field === "stock") {
+      if (
+        field === "stock"
+      ) {
         currentSize.stock =
           value;
       }
@@ -1578,12 +2460,11 @@ export default function AdminProductManager() {
   // ADD SIZE
   // ============================================================
 
-  const addSize = (
-    colourIndex
-  ) => {
+  const addSize = colourIndex => {
+
     const size =
       window.prompt(
-        "Enter size name (example: XS, S, M, L, XL, XXL):"
+        "Enter size name:"
       );
 
     if (
@@ -1598,7 +2479,8 @@ export default function AdminProductManager() {
         .trim()
         .toUpperCase();
 
-    setFormData((prev) => {
+    setFormData(prev => {
+
       const variants = [
         ...prev.variants
       ];
@@ -1616,7 +2498,7 @@ export default function AdminProductManager() {
 
       const exists =
         sizes.some(
-          (item) =>
+          item =>
             String(
               item.size
             ).toLowerCase() ===
@@ -1660,7 +2542,9 @@ export default function AdminProductManager() {
     colourIndex,
     sizeIndex
   ) => {
-    setFormData((prev) => {
+
+    setFormData(prev => {
+
       const variants = [
         ...prev.variants
       ];
@@ -1676,7 +2560,9 @@ export default function AdminProductManager() {
           [])
       ];
 
-      if (sizes.length <= 1) {
+      if (
+        sizes.length <= 1
+      ) {
         alert(
           "At least one size is required."
         );
@@ -1703,28 +2589,31 @@ export default function AdminProductManager() {
   };
 
   // ============================================================
-  // PRODUCT MAIN IMAGE
+  // IMAGE HANDLING
   // ============================================================
 
   const handleImageChange = (
     e,
     type
   ) => {
-    const files = Array.from(
-      e.target.files || []
-    );
+
+    const files =
+      Array.from(
+        e.target.files || []
+      );
 
     if (!files.length) {
       return;
     }
 
     if (type === "img") {
+
       const url =
         URL.createObjectURL(
           files[0]
         );
 
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
 
         img: url,
@@ -1732,20 +2621,18 @@ export default function AdminProductManager() {
         imgFile:
           files[0]
       }));
-    }
 
-    if (
-      type ===
-      "thumbnails"
-    ) {
+    } else {
+
       const urls =
-        files.map((file) =>
-          URL.createObjectURL(
-            file
-          )
+        files.map(
+          file =>
+            URL.createObjectURL(
+              file
+            )
         );
 
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
 
         thumbnails:
@@ -1757,14 +2644,11 @@ export default function AdminProductManager() {
     }
   };
 
-  // ============================================================
-  // VARIANT MAIN IMAGE
-  // ============================================================
-
   const handleVariantMainImage = (
     colourIndex,
     e
   ) => {
+
     const file =
       e.target.files?.[0];
 
@@ -1777,7 +2661,8 @@ export default function AdminProductManager() {
         file
       );
 
-    setFormData((prev) => {
+    setFormData(prev => {
+
       const variants = [
         ...prev.variants
       ];
@@ -1800,30 +2685,30 @@ export default function AdminProductManager() {
     });
   };
 
-  // ============================================================
-  // VARIANT THUMBNAILS
-  // ============================================================
-
   const handleVariantThumbnails = (
     colourIndex,
     e
   ) => {
-    const files = Array.from(
-      e.target.files || []
-    );
+
+    const files =
+      Array.from(
+        e.target.files || []
+      );
 
     if (!files.length) {
       return;
     }
 
     const urls =
-      files.map((file) =>
-        URL.createObjectURL(
-          file
-        )
+      files.map(
+        file =>
+          URL.createObjectURL(
+            file
+          )
       );
 
-    setFormData((prev) => {
+    setFormData(prev => {
+
       const variants = [
         ...prev.variants
       ];
@@ -1843,8 +2728,7 @@ export default function AdminProductManager() {
         thumbnailFiles: [
           ...(variants[
             colourIndex
-          ].thumbnailFiles ||
-            []),
+          ].thumbnailFiles || []),
           ...files
         ]
       };
@@ -1856,22 +2740,16 @@ export default function AdminProductManager() {
     });
   };
 
-  // ============================================================
-  // REMOVE VARIANT MAIN IMAGE
-  // ============================================================
+  const removeVariantMainImage = index => {
 
-  const removeVariantMainImage = (
-    colourIndex
-  ) => {
-    setFormData((prev) => {
+    setFormData(prev => {
+
       const variants = [
         ...prev.variants
       ];
 
-      variants[colourIndex] = {
-        ...variants[
-          colourIndex
-        ],
+      variants[index] = {
+        ...variants[index],
 
         mainImage: "",
 
@@ -1885,15 +2763,13 @@ export default function AdminProductManager() {
     });
   };
 
-  // ============================================================
-  // REMOVE VARIANT THUMBNAIL
-  // ============================================================
-
   const removeVariantThumbnail = (
     colourIndex,
     imageIndex
   ) => {
-    setFormData((prev) => {
+
+    setFormData(prev => {
+
       const variants = [
         ...prev.variants
       ];
@@ -1919,14 +2795,6 @@ export default function AdminProductManager() {
         1
       );
 
-      /*
-       * Only remove the file when it
-       * belongs to the newly selected
-       * files.
-       *
-       * Existing URLs do not have
-       * corresponding files.
-       */
       if (
         imageIndex <
         thumbnailFiles.length
@@ -1954,141 +2822,131 @@ export default function AdminProductManager() {
   };
 
   // ============================================================
-  // VALIDATE
+  // VALIDATION
   // ============================================================
 
-  const validateVariants =
-    () => {
+  const validateVariants = () => {
+
+    if (
+      !formData.variants.length
+    ) {
+      throw new Error(
+        "Please add at least one colour."
+      );
+    }
+
+    for (
+      let i = 0;
+      i <
+      formData.variants.length;
+      i++
+    ) {
+
+      const variant =
+        formData.variants[i];
+
       if (
-        !formData.variants.length
+        !variant.colour?.trim()
       ) {
         throw new Error(
-          "Please add at least one colour."
+          `Please enter colour for Colour ${
+            i + 1
+          }.`
         );
       }
 
-      for (
-        let i = 0;
-        i <
-        formData.variants.length;
-        i++
+      if (
+        !variant.mainImage &&
+        !variant.mainImageFile
       ) {
-        const variant =
-          formData.variants[i];
+        throw new Error(
+          `Please add a main image for ${variant.colour}.`
+        );
+      }
+
+      if (
+        isDressCategory(
+          formData.cat
+        )
+      ) {
 
         if (
-          !variant.colour?.trim()
+          !variant.sizes?.length
         ) {
           throw new Error(
-            `Please enter colour for Colour ${
-              i + 1
-            }.`
+            `Please add at least one size for ${variant.colour}.`
           );
         }
 
-        /*
-         * IMAGE VALIDATION
-         *
-         * Each colour should have
-         * its own main image.
-         */
+        for (
+          let j = 0;
+          j <
+          variant.sizes.length;
+          j++
+        ) {
+
+          const size =
+            variant.sizes[j];
+
+          if (
+            size.price === "" ||
+            size.price === null ||
+            size.price === undefined
+          ) {
+            throw new Error(
+              `Please enter price for ${variant.colour} - ${size.size}.`
+            );
+          }
+
+          if (
+            size.stock === "" ||
+            size.stock === null ||
+            size.stock === undefined
+          ) {
+            throw new Error(
+              `Please enter stock for ${variant.colour} - ${size.size}.`
+            );
+          }
+        }
+
+      } else {
+
         if (
-          !variant.mainImage &&
-          !variant.mainImageFile
+          variant.price === "" ||
+          variant.price === null ||
+          variant.price === undefined
         ) {
           throw new Error(
-            `Please add a main image for ${variant.colour}.`
+            `Please enter price for ${variant.colour}.`
           );
         }
 
         if (
-          isDressCategory(
-            formData.cat
-          )
+          variant.stock === "" ||
+          variant.stock === null ||
+          variant.stock === undefined
         ) {
-          if (
-            !variant.sizes?.length
-          ) {
-            throw new Error(
-              `Please add at least one size for ${variant.colour}.`
-            );
-          }
-
-          for (
-            let j = 0;
-            j <
-            variant.sizes.length;
-            j++
-          ) {
-            const size =
-              variant.sizes[j];
-
-            if (
-              size.price === "" ||
-              size.price ===
-                null ||
-              size.price ===
-                undefined
-            ) {
-              throw new Error(
-                `Please enter price for ${variant.colour} - ${size.size}.`
-              );
-            }
-
-            if (
-              size.stock === "" ||
-              size.stock ===
-                null ||
-              size.stock ===
-                undefined
-            ) {
-              throw new Error(
-                `Please enter stock for ${variant.colour} - ${size.size}.`
-              );
-            }
-          }
-        } else {
-          if (
-            variant.price === "" ||
-            variant.price ===
-              null ||
-            variant.price ===
-              undefined
-          ) {
-            throw new Error(
-              `Please enter price for ${variant.colour}.`
-            );
-          }
-
-          if (
-            variant.stock === "" ||
-            variant.stock ===
-              null ||
-            variant.stock ===
-              undefined
-          ) {
-            throw new Error(
-              `Please enter stock for ${variant.colour}.`
-            );
-          }
+          throw new Error(
+            `Please enter stock for ${variant.colour}.`
+          );
         }
       }
-    };
+    }
+  };
 
   // ============================================================
-  // SAVE
+  // SAVE PRODUCT
   // ============================================================
 
-  const handleSave = async (
-    e
-  ) => {
+  const handleSave = async e => {
+
     e.preventDefault();
 
     setSaving(true);
-
     setErrorMessage("");
 
     try {
+
       if (
         !formData.name.trim()
       ) {
@@ -2101,10 +2959,6 @@ export default function AdminProductManager() {
 
       const form =
         new FormData();
-
-      // ========================================================
-      // BASIC PRODUCT
-      // ========================================================
 
       form.append(
         "name",
@@ -2126,23 +2980,18 @@ export default function AdminProductManager() {
         formData.type
       );
 
-      // ========================================================
-      // DEFAULT VALUES
-      // ========================================================
-
-      let defaultPrice = 0;
-
-      let defaultOldPrice = 0;
-
-      let defaultDiscount = 0;
-
-      let defaultStock = 0;
-
-      if (
+      const dress =
         isDressCategory(
           formData.cat
-        )
-      ) {
+        );
+
+      let defaultPrice = 0;
+      let defaultOldPrice = 0;
+      let defaultDiscount = 0;
+      let defaultStock = 0;
+
+      if (dress) {
+
         const firstColour =
           formData.variants[0];
 
@@ -2156,72 +3005,57 @@ export default function AdminProductManager() {
 
         defaultOldPrice =
           Number(
-            firstSize?.oldPrice ||
-              0
+            firstSize?.oldPrice || 0
           );
 
         defaultDiscount =
           Number(
-            firstSize?.discount ||
-              0
+            firstSize?.discount || 0
           );
 
         defaultStock =
           formData.variants.reduce(
-            (
-              total,
-              colour
-            ) =>
+            (total, colour) =>
               total +
               (
-                colour.sizes ||
-                []
+                colour.sizes || []
               ).reduce(
-                (
-                  sizeTotal,
-                  size
-                ) =>
-                  sizeTotal +
+                (sum, size) =>
+                  sum +
                   Number(
-                    size.stock ||
-                      0
+                    size.stock || 0
                   ),
                 0
               ),
             0
           );
+
       } else {
+
         const firstColour =
           formData.variants[0];
 
         defaultPrice =
           Number(
-            firstColour?.price ||
-              0
+            firstColour?.price || 0
           );
 
         defaultOldPrice =
           Number(
-            firstColour?.oldPrice ||
-              0
+            firstColour?.oldPrice || 0
           );
 
         defaultDiscount =
           Number(
-            firstColour?.discount ||
-              0
+            firstColour?.discount || 0
           );
 
         defaultStock =
           formData.variants.reduce(
-            (
-              total,
-              variant
-            ) =>
+            (total, variant) =>
               total +
               Number(
-                variant.stock ||
-                  0
+                variant.stock || 0
               ),
             0
           );
@@ -2249,168 +3083,126 @@ export default function AdminProductManager() {
 
       form.append(
         "hasSizes",
-        String(
-          isDressCategory(
-            formData.cat
-          )
-        )
+        String(dress)
       );
-
-      // ========================================================
-      // MAIN PRODUCT IMAGE
-      // ========================================================
 
       if (
         formData.imgFile
       ) {
+
         form.append(
           "img_url",
           formData.imgFile
         );
+
       } else if (
         currentProduct
       ) {
+
         form.append(
           "existingMainImage",
-          currentProduct.img_url ||
-            ""
+          currentProduct.img_url || ""
         );
       }
 
-      // ========================================================
-      // MAIN PRODUCT THUMBNAILS
-      // ========================================================
-
       if (
-        formData.thumbnailFiles
-          ?.length
+        formData.thumbnailFiles?.length
       ) {
+
         formData.thumbnailFiles.forEach(
-          (file) => {
+          file => {
             form.append(
               "thumbnails",
               file
             );
           }
         );
+
       } else if (
         currentProduct
       ) {
+
         form.append(
           "existingThumbnails",
           JSON.stringify(
-            currentProduct.thumbnails ||
-              []
+            currentProduct.thumbnails || []
           )
         );
       }
 
-      // ========================================================
-      // VARIANT METADATA
-      // ========================================================
-      /*
-       * IMPORTANT:
-       *
-       * We DO NOT put File objects
-       * into JSON.
-       *
-       * Files are sent below separately.
-       */
-
       const variantsForJSON =
         formData.variants.map(
-          (
-            variant,
-            colourIndex
-          ) => {
+          (variant, colourIndex) => {
+
             const cleanVariant = {
               colour:
                 variant.colour
             };
 
-            if (
-              isDressCategory(
-                formData.cat
-              )
-            ) {
+            if (dress) {
+
               cleanVariant.sizes =
                 (
-                  variant.sizes ||
-                  []
-                ).map(
-                  (size) => ({
-                    size:
-                      size.size,
-                    price:
-                      Number(
-                        size.price ||
-                          0
-                      ),
-                    oldPrice:
-                      Number(
-                        size.oldPrice ||
-                          0
-                      ),
-                    discount:
-                      Number(
-                        size.discount ||
-                          0
-                      ),
-                    stock:
-                      Number(
-                        size.stock ||
-                          0
-                      )
-                  })
-                );
+                  variant.sizes || []
+                ).map(size => ({
+                  size:
+                    size.size,
+
+                  price:
+                    Number(
+                      size.price || 0
+                    ),
+
+                  oldPrice:
+                    Number(
+                      size.oldPrice || 0
+                    ),
+
+                  discount:
+                    Number(
+                      size.discount || 0
+                    ),
+
+                  stock:
+                    Number(
+                      size.stock || 0
+                    )
+                }));
+
             } else {
+
               cleanVariant.price =
                 Number(
-                  variant.price ||
-                    0
+                  variant.price || 0
                 );
 
               cleanVariant.oldPrice =
                 Number(
-                  variant.oldPrice ||
-                    0
+                  variant.oldPrice || 0
                 );
 
               cleanVariant.discount =
                 Number(
-                  variant.discount ||
-                    0
+                  variant.discount || 0
                 );
 
               cleanVariant.stock =
                 Number(
-                  variant.stock ||
-                    0
+                  variant.stock || 0
                 );
             }
-
-            /*
-             * Existing images are included
-             * in metadata.
-             *
-             * New uploaded files are mapped
-             * using their indexes below.
-             */
 
             cleanVariant.existingMainImage =
               variant.mainImageFile
                 ? ""
-                : variant.mainImage ||
-                  "";
+                : variant.mainImage || "";
 
             cleanVariant.existingThumbnails =
               (
-                variant.thumbnails ||
-                []
+                variant.thumbnails || []
               ).filter(
-                (url) =>
-                  typeof url ===
-                  "string"
+                url =>
+                  typeof url === "string"
               );
 
             cleanVariant.mainImageField =
@@ -2432,25 +3224,6 @@ export default function AdminProductManager() {
         )
       );
 
-      // ========================================================
-      // VARIANT IMAGE FILES
-      // ========================================================
-
-      /*
-       * Every colour gets its own field.
-       *
-       * Example:
-       *
-       * variant_0_main
-       * variant_0_thumbnails
-       *
-       * variant_1_main
-       * variant_1_thumbnails
-       *
-       * variant_2_main
-       * variant_2_thumbnails
-       */
-
       const variantImageMeta = [];
 
       formData.variants.forEach(
@@ -2458,29 +3231,24 @@ export default function AdminProductManager() {
           variant,
           colourIndex
         ) => {
-          // ----------------------------------------------------
-          // MAIN IMAGE
-          // ----------------------------------------------------
 
           if (
             variant.mainImageFile
           ) {
+
             form.append(
               `variant_${colourIndex}_main`,
               variant.mainImageFile
             );
           }
 
-          // ----------------------------------------------------
-          // THUMBNAILS
-          // ----------------------------------------------------
-
           if (
-            variant.thumbnailFiles
-              ?.length
+            variant.thumbnailFiles?.length
           ) {
+
             variant.thumbnailFiles.forEach(
-              (file) => {
+              file => {
+
                 form.append(
                   `variant_${colourIndex}_thumbnails`,
                   file
@@ -2506,17 +3274,14 @@ export default function AdminProductManager() {
             existingMainImage:
               variant.mainImageFile
                 ? null
-                : variant.mainImage ||
-                  null,
+                : variant.mainImage || null,
 
             existingThumbnails:
               (
-                variant.thumbnails ||
-                []
+                variant.thumbnails || []
               ).filter(
-                (url) =>
-                  typeof url ===
-                  "string"
+                url =>
+                  typeof url === "string"
               )
           });
         }
@@ -2529,27 +3294,10 @@ export default function AdminProductManager() {
         )
       );
 
-      // ========================================================
-      // DEBUG
-      // ========================================================
-
-      console.log(
-        "Saving variants:",
-        variantsForJSON
-      );
-
-      console.log(
-        "Variant image metadata:",
-        variantImageMeta
-      );
-
-      // ========================================================
-      // API
-      // ========================================================
-
-      const url = currentProduct
-        ? `${API_URL}/update/${currentProduct.id}`
-        : `${API_URL}/add`;
+      const url =
+        currentProduct
+          ? `${API_URL}/update/${currentProduct.id}`
+          : `${API_URL}/add`;
 
       const method =
         currentProduct
@@ -2557,10 +3305,13 @@ export default function AdminProductManager() {
           : "POST";
 
       const res =
-        await fetch(url, {
-          method,
-          body: form
-        });
+        await fetch(
+          url,
+          {
+            method,
+            body: form
+          }
+        );
 
       const responseText =
         await res.text();
@@ -2568,41 +3319,1245 @@ export default function AdminProductManager() {
       if (!res.ok) {
         throw new Error(
           responseText ||
-            "Failed to save product."
+          "Failed to save product."
         );
       }
-
-      console.log(
-        "Product saved:",
-        responseText
-      );
 
       await fetchProducts();
 
       setModalOpen(false);
 
-      setCurrentProduct(
-        null
-      );
+      setCurrentProduct(null);
 
       alert(
         currentProduct
           ? "Product updated successfully!"
           : "Product added successfully!"
       );
+
     } catch (err) {
-      console.error(
-        "Error saving product:",
-        err
-      );
+
+      console.error(err);
 
       setErrorMessage(
         err.message ||
-          "Failed to save product."
+        "Failed to save product."
       );
+
     } finally {
+
       setSaving(false);
     }
+  };
+
+  // ============================================================
+  // BUILD BULK PRODUCT FROM CSV ROWS
+  // ============================================================
+
+  const buildBulkProducts = rows => {
+
+    const grouped = {};
+
+    rows.forEach(row => {
+
+      const name =
+        row.name?.trim();
+
+      if (!name) {
+        return;
+      }
+
+      const category =
+        row.category?.trim() ||
+        "SILK SAREES";
+
+      const subCategory =
+        row.subcategory?.trim() ||
+        row.subcat?.trim() ||
+        "";
+
+      const type =
+        row.type?.trim() ||
+        "New Arrival";
+
+      const key = [
+        name,
+        category,
+        subCategory,
+        type
+      ]
+        .join("|||")
+        .toLowerCase();
+
+      if (!grouped[key]) {
+
+        grouped[key] = {
+          name,
+          category,
+          subCategory,
+          type,
+          variants: []
+        };
+      }
+
+      const colour =
+        row.colour?.trim();
+
+      if (!colour) {
+        return;
+      }
+
+      const mainImage =
+        row.mainimage?.trim() ||
+        row.main_image?.trim() ||
+        "";
+
+      const thumbnailsString =
+        row.thumbnails?.trim() ||
+        "";
+
+      const thumbnails =
+        thumbnailsString
+          ? thumbnailsString
+              .split("|")
+              .map(x => x.trim())
+              .filter(Boolean)
+          : [];
+
+      const dress =
+        isDressCategory(
+          category
+        );
+
+      if (dress) {
+
+        const sizesString =
+          row.sizes?.trim() || "";
+
+        const sizes =
+          sizesString
+            ? sizesString
+                .split(";")
+                .map(item => {
+
+                  const parts =
+                    item
+                      .split("|")
+                      .map(x => x.trim());
+
+                  return {
+                    size:
+                      parts[0] || "",
+
+                    price:
+                      Number(
+                        parts[1] || 0
+                      ),
+
+                    oldPrice:
+                      Number(
+                        parts[2] || 0
+                      ),
+
+                    discount:
+                      Number(
+                        parts[3] || 0
+                      ),
+
+                    stock:
+                      Number(
+                        parts[4] || 0
+                      )
+                  };
+                })
+                .filter(
+                  item =>
+                    item.size
+                )
+            : [];
+
+        grouped[key]
+          .variants
+          .push({
+            colour,
+            sizes,
+            existingMainImage:
+              mainImage,
+            existingThumbnails:
+              thumbnails
+          });
+
+      } else {
+
+        const price =
+          Number(
+            row.price || 0
+          );
+
+        const oldPrice =
+          Number(
+            row.oldprice ||
+            row.old_price ||
+            0
+          );
+
+        let discount =
+          Number(
+            row.discount || 0
+          );
+
+        if (
+          !discount &&
+          oldPrice > price
+        ) {
+          discount =
+            calculateDiscount(
+              price,
+              oldPrice
+            );
+        }
+
+        grouped[key]
+          .variants
+          .push({
+            colour,
+
+            price,
+
+            oldPrice,
+
+            discount,
+
+            stock:
+              Number(
+                row.stock || 0
+              ),
+
+            existingMainImage:
+              mainImage,
+
+            existingThumbnails:
+              thumbnails
+          });
+      }
+    });
+
+    return Object.values(
+      grouped
+    );
+  };
+
+  // ============================================================
+  // BULK FILE SELECT
+  // ============================================================
+
+// ============================================================
+// BULK FILE SELECT
+// CSV AND EXCEL
+// ============================================================
+
+const handleBulkFile = e => {
+
+  const file = e.target.files?.[0];
+
+  if (!file) {
+    return;
+  }
+
+  const fileName =
+    file.name.toLowerCase();
+
+
+  // ==========================================================
+  // CSV UPLOAD
+  // ==========================================================
+
+  if (bulkUploadType === "csv") {
+
+    if (!fileName.endsWith(".csv")) {
+
+      alert(
+        "Please select a CSV file."
+      );
+
+      e.target.value = "";
+
+      return;
+    }
+
+    setBulkFileName(file.name);
+
+    setBulkResult("");
+
+    setBulkErrors([]);
+
+    const reader = new FileReader();
+
+
+    reader.onload = event => {
+
+      try {
+
+        const text =
+          event.target.result;
+
+        const rows =
+          parseCSV(text);
+
+        if (!rows.length) {
+
+          throw new Error(
+            "CSV file is empty."
+          );
+        }
+
+        setBulkRows(rows);
+
+        setBulkResult(
+          `${rows.length} CSV rows loaded successfully.`
+        );
+
+      } catch (err) {
+
+        console.error(err);
+
+        setBulkRows([]);
+
+        setBulkErrors([
+          err.message ||
+          "Unable to read CSV file."
+        ]);
+      }
+    };
+
+
+    reader.onerror = () => {
+
+      setBulkRows([]);
+
+      setBulkErrors([
+        "Failed to read CSV file."
+      ]);
+    };
+
+
+    reader.readAsText(file);
+
+    return;
+  }
+
+
+  // ==========================================================
+  // EXCEL UPLOAD
+  // ==========================================================
+
+  if (bulkUploadType === "excel") {
+
+    const isExcel =
+
+      fileName.endsWith(".xlsx") ||
+
+      fileName.endsWith(".xls");
+
+
+    if (!isExcel) {
+
+      alert(
+        "Please select an Excel file (.xlsx or .xls)."
+      );
+
+      e.target.value = "";
+
+      return;
+    }
+
+
+    setBulkFileName(file.name);
+
+    setBulkResult("");
+
+    setBulkErrors([]);
+
+
+    const reader = new FileReader();
+
+
+    reader.onload = event => {
+
+      try {
+
+        const data =
+          event.target.result;
+
+
+        // Read Excel workbook
+
+        const workbook =
+          XLSX.read(data, {
+            type: "array"
+          });
+
+
+        if (
+          !workbook.SheetNames ||
+          !workbook.SheetNames.length
+        ) {
+
+          throw new Error(
+            "Excel file does not contain any sheets."
+          );
+        }
+
+
+        // First sheet
+
+        const firstSheetName =
+          workbook.SheetNames[0];
+
+
+        const worksheet =
+          workbook.Sheets[firstSheetName];
+
+
+        let rows =
+          XLSX.utils.sheet_to_json(
+            worksheet,
+            {
+              defval: ""
+            }
+          );
+
+
+        // Normalize column names
+        // Example:
+        // "Old Price" -> oldprice
+        // "main Image" -> mainimage
+
+        rows = rows.map(row => {
+
+          const normalizedRow = {};
+
+
+          Object.keys(row).forEach(key => {
+
+            const normalizedKey =
+
+              String(key)
+
+                .trim()
+
+                .toLowerCase()
+
+                .replace(/\s+/g, "");
+
+
+            normalizedRow[normalizedKey] =
+              row[key];
+
+          });
+
+
+          return normalizedRow;
+        });
+
+
+        if (!rows.length) {
+
+          throw new Error(
+            "Excel file is empty."
+          );
+        }
+
+
+        setBulkRows(rows);
+
+
+        setBulkResult(
+          `${rows.length} Excel rows loaded successfully.`
+        );
+
+
+      } catch (err) {
+
+        console.error(err);
+
+        setBulkRows([]);
+
+
+        setBulkErrors([
+          err.message ||
+          "Unable to read Excel file."
+        ]);
+      }
+    };
+
+
+    reader.onerror = () => {
+
+      setBulkRows([]);
+
+      setBulkErrors([
+        "Failed to read Excel file."
+      ]);
+    };
+
+
+    reader.readAsArrayBuffer(file);
+
+    return;
+  }
+
+
+  // ==========================================================
+  // INVALID UPLOAD TYPE
+  // ==========================================================
+
+  alert(
+    "Please select CSV Upload or Excel Upload first."
+  );
+
+  e.target.value = "";
+};
+  // ============================================================
+  // DOWNLOAD CSV TEMPLATE
+  // ============================================================
+
+  const downloadTemplate = () => {
+
+    const rows = [
+      {
+        name:
+          "Sample Kanchipuram Saree",
+
+        category:
+          "SILK SAREES",
+
+        subCategory:
+          "Chiffons",
+
+        type:
+          "New Arrival",
+
+        colour:
+          "Red",
+
+        price:
+          "2499",
+
+        oldPrice:
+          "2999",
+
+        discount:
+          "17",
+
+        stock:
+          "10",
+
+        mainImage:
+          "https://example.com/red.jpg",
+
+        thumbnails:
+          "https://example.com/r1.jpg|https://example.com/r2.jpg",
+
+        sizes:
+          ""
+      },
+
+      {
+        name:
+          "Sample Kanchipuram Saree",
+
+        category:
+          "SILK SAREES",
+
+        subCategory:
+          "Chiffons",
+
+        type:
+          "New Arrival",
+
+        colour:
+          "Blue",
+
+        price:
+          "2799",
+
+        oldPrice:
+          "3299",
+
+        discount:
+          "15",
+
+        stock:
+          "8",
+
+        mainImage:
+          "https://example.com/blue.jpg",
+
+        thumbnails:
+          "https://example.com/b1.jpg|https://example.com/b2.jpg",
+
+        sizes:
+          ""
+      },
+
+      {
+        name:
+          "Sample Dress",
+
+        category:
+          "Dress Materials",
+
+        subCategory:
+          "",
+
+        type:
+          "Regular",
+
+        colour:
+          "Pink",
+
+        price:
+          "",
+
+        oldPrice:
+          "",
+
+        discount:
+          "",
+
+        stock:
+          "",
+
+        mainImage:
+          "https://example.com/pink.jpg",
+
+        thumbnails:
+          "https://example.com/p1.jpg|https://example.com/p2.jpg",
+
+        sizes:
+          "S|999|1299|23|10;M|999|1299|23|15;L|1099|1399|21|8"
+      }
+    ];
+
+    downloadCSV(
+      rows,
+      "products_bulk_template.csv"
+    );
+  };
+
+  // ============================================================
+  // BULK UPLOAD
+  // ============================================================
+
+  const handleBulkUpload = async () => {
+
+    if (!bulkRows.length) {
+
+      alert(
+        "Please select a CSV file first."
+      );
+
+      return;
+    }
+
+    setBulkUploading(true);
+
+    setBulkProgress(0);
+
+    setBulkResult("");
+
+    setBulkErrors([]);
+
+    const bulkProducts =
+      buildBulkProducts(
+        bulkRows
+      );
+
+    if (!bulkProducts.length) {
+
+      setBulkUploading(false);
+
+      setBulkErrors([
+        "No valid products found in CSV."
+      ]);
+
+      return;
+    }
+
+    let successCount = 0;
+
+    const errors = [];
+
+    for (
+      let i = 0;
+      i < bulkProducts.length;
+      i++
+    ) {
+
+      const product =
+        bulkProducts[i];
+
+      try {
+
+        const dress =
+          isDressCategory(
+            product.category
+          );
+
+        if (
+          !product.variants.length
+        ) {
+          throw new Error(
+            `${product.name}: No colour variants found.`
+          );
+        }
+
+        const firstVariant =
+          product.variants[0];
+
+        let defaultPrice = 0;
+        let defaultOldPrice = 0;
+        let defaultDiscount = 0;
+        let defaultStock = 0;
+
+        if (dress) {
+
+          const firstSize =
+            firstVariant
+              ?.sizes?.[0];
+
+          defaultPrice =
+            Number(
+              firstSize?.price || 0
+            );
+
+          defaultOldPrice =
+            Number(
+              firstSize?.oldPrice || 0
+            );
+
+          defaultDiscount =
+            Number(
+              firstSize?.discount || 0
+            );
+
+          defaultStock =
+            product.variants.reduce(
+              (total, variant) =>
+                total +
+                (
+                  variant.sizes || []
+                ).reduce(
+                  (sum, size) =>
+                    sum +
+                    Number(
+                      size.stock || 0
+                    ),
+                  0
+                ),
+              0
+            );
+
+        } else {
+
+          defaultPrice =
+            Number(
+              firstVariant?.price || 0
+            );
+
+          defaultOldPrice =
+            Number(
+              firstVariant?.oldPrice || 0
+            );
+
+          defaultDiscount =
+            Number(
+              firstVariant?.discount || 0
+            );
+
+          defaultStock =
+            product.variants.reduce(
+              (total, variant) =>
+                total +
+                Number(
+                  variant.stock || 0
+                ),
+              0
+            );
+        }
+
+        const form =
+          new FormData();
+
+        form.append(
+          "name",
+          product.name
+        );
+
+        form.append(
+          "cat",
+          product.category
+        );
+
+        form.append(
+          "subCategory",
+          product.subCategory
+        );
+
+        form.append(
+          "type",
+          product.type
+        );
+
+        form.append(
+          "price",
+          String(
+            defaultPrice
+          )
+        );
+
+        form.append(
+          "oldPrice",
+          String(
+            defaultOldPrice
+          )
+        );
+
+        form.append(
+          "discount",
+          String(
+            defaultDiscount
+          )
+        );
+
+        form.append(
+          "stock",
+          String(
+            defaultStock
+          )
+        );
+
+        form.append(
+          "hasSizes",
+          String(dress)
+        );
+
+        // --------------------------------------------------------
+        // VARIANTS
+        // --------------------------------------------------------
+
+        const variants =
+          product.variants.map(
+            (
+              variant,
+              colourIndex
+            ) => {
+
+              const clean = {
+                colour:
+                  variant.colour
+              };
+
+              if (dress) {
+
+                clean.sizes =
+                  (
+                    variant.sizes ||
+                    []
+                  ).map(size => ({
+                    size:
+                      size.size,
+
+                    price:
+                      Number(
+                        size.price || 0
+                      ),
+
+                    oldPrice:
+                      Number(
+                        size.oldPrice || 0
+                      ),
+
+                    discount:
+                      Number(
+                        size.discount || 0
+                      ),
+
+                    stock:
+                      Number(
+                        size.stock || 0
+                      )
+                  }));
+
+              } else {
+
+                clean.price =
+                  Number(
+                    variant.price || 0
+                  );
+
+                clean.oldPrice =
+                  Number(
+                    variant.oldPrice || 0
+                  );
+
+                clean.discount =
+                  Number(
+                    variant.discount || 0
+                  );
+
+                clean.stock =
+                  Number(
+                    variant.stock || 0
+                  );
+              }
+
+              clean.existingMainImage =
+                variant.existingMainImage ||
+                "";
+
+              clean.existingThumbnails =
+                variant.existingThumbnails ||
+                [];
+
+              clean.mainImageField = "";
+
+              clean.thumbnailField =
+                `variant_${colourIndex}_thumbnails`;
+
+              return clean;
+            }
+          );
+
+        form.append(
+          "variants",
+          JSON.stringify(
+            variants
+          )
+        );
+
+        // --------------------------------------------------------
+        // IMAGE META
+        // --------------------------------------------------------
+
+        const imageMeta =
+          product.variants.map(
+            (
+              variant,
+              colourIndex
+            ) => ({
+              colourIndex,
+
+              colour:
+                variant.colour,
+
+              mainImageField:
+                null,
+
+              thumbnailField:
+                `variant_${colourIndex}_thumbnails`,
+
+              existingMainImage:
+                variant.existingMainImage ||
+                null,
+
+              existingThumbnails:
+                variant.existingThumbnails ||
+                []
+            })
+          );
+
+        form.append(
+          "variantImageMeta",
+          JSON.stringify(
+            imageMeta
+          )
+        );
+
+        // --------------------------------------------------------
+        // MAIN PRODUCT IMAGE URL
+        // --------------------------------------------------------
+
+        if (
+          firstVariant?.existingMainImage
+        ) {
+
+          form.append(
+            "existingMainImage",
+            firstVariant.existingMainImage
+          );
+        }
+
+        // --------------------------------------------------------
+        // PRODUCT THUMBNAILS
+        // --------------------------------------------------------
+
+        if (
+          firstVariant?.existingThumbnails
+            ?.length
+        ) {
+
+          form.append(
+            "existingThumbnails",
+            JSON.stringify(
+              firstVariant.existingThumbnails
+            )
+          );
+        }
+
+        // --------------------------------------------------------
+        // SEND
+        // --------------------------------------------------------
+
+        const response =
+          await fetch(
+            `${API_URL}/add`,
+            {
+              method: "POST",
+              body: form
+            }
+          );
+
+        const responseText =
+          await response.text();
+
+        if (!response.ok) {
+          throw new Error(
+            responseText ||
+            "Failed to add product."
+          );
+        }
+
+        successCount++;
+
+      } catch (err) {
+
+        console.error(
+          "Bulk product error:",
+          product,
+          err
+        );
+
+        errors.push(
+          `${product.name}: ${
+            err.message
+          }`
+        );
+      }
+
+      setBulkProgress(
+        Math.round(
+          ((i + 1) /
+            bulkProducts.length) *
+          100
+        )
+      );
+    }
+
+    await fetchProducts();
+
+    setBulkUploading(false);
+
+    setBulkErrors(errors);
+
+    setBulkResult(
+      `${successCount} of ${bulkProducts.length} products added successfully.`
+    );
+  };
+
+  // ============================================================
+  // EXPORT PRODUCTS
+  // ============================================================
+
+  const handleExportProducts = () => {
+
+    if (!products.length) {
+
+      alert(
+        "There are no products to export."
+      );
+
+      return;
+    }
+
+    const rows = [];
+
+    products.forEach(product => {
+
+      const variants =
+        normalizeVariants(
+          product
+        );
+
+      const dress =
+        isDressCategory(
+          product.category
+        );
+
+      if (!variants.length) {
+
+        rows.push({
+          name:
+            product.name || "",
+
+          category:
+            product.category || "",
+
+          subCategory:
+            product.sub_category ||
+            product.subCategory ||
+            "",
+
+          type:
+            product.type || "",
+
+          colour: "",
+
+          price:
+            product.price || "",
+
+          oldPrice:
+            product.old_price || "",
+
+          discount:
+            product.discount || "",
+
+          stock:
+            product.stock || "",
+
+          mainImage:
+            product.img_url || "",
+
+          thumbnails:
+            (
+              product.thumbnails || []
+            ).join("|"),
+
+          sizes: ""
+        });
+
+        return;
+      }
+
+      variants.forEach(
+        variant => {
+
+          const mainImage =
+            variant.mainImage ||
+            variant.main_image ||
+            variant.image ||
+            "";
+
+          const thumbnails =
+            Array.isArray(
+              variant.thumbnails
+            )
+              ? variant.thumbnails
+              : [];
+
+          if (dress) {
+
+            const sizes =
+              (
+                variant.sizes || []
+              )
+                .map(size =>
+                  [
+                    size.size || "",
+                    size.price || 0,
+                    size.oldPrice ||
+                      size.old_price ||
+                      0,
+                    size.discount || 0,
+                    size.stock || 0
+                  ].join("|")
+                )
+                .join(";");
+
+            rows.push({
+              name:
+                product.name || "",
+
+              category:
+                product.category || "",
+
+              subCategory:
+                product.sub_category ||
+                product.subCategory ||
+                "",
+
+              type:
+                product.type || "",
+
+              colour:
+                variant.colour || "",
+
+              price: "",
+              oldPrice: "",
+              discount: "",
+              stock: "",
+
+              mainImage,
+
+              thumbnails:
+                thumbnails.join("|"),
+
+              sizes
+            });
+
+          } else {
+
+            rows.push({
+              name:
+                product.name || "",
+
+              category:
+                product.category || "",
+
+              subCategory:
+                product.sub_category ||
+                product.subCategory ||
+                "",
+
+              type:
+                product.type || "",
+
+              colour:
+                variant.colour || "",
+
+              price:
+                variant.price || "",
+
+              oldPrice:
+                variant.oldPrice ||
+                variant.old_price ||
+                "",
+
+              discount:
+                variant.discount || "",
+
+              stock:
+                variant.stock || "",
+
+              mainImage,
+
+              thumbnails:
+                thumbnails.join("|"),
+
+              sizes: ""
+            });
+          }
+        }
+      );
+    });
+
+    downloadCSV(
+      rows,
+      `products_export_${new Date()
+        .toISOString()
+        .slice(0, 10)}.csv`
+    );
   };
 
   // ============================================================
@@ -2610,7 +4565,8 @@ export default function AdminProductManager() {
   // ============================================================
 
   const getTotalVariantStock =
-    (product) => {
+    product => {
+
       const variants =
         normalizeVariants(
           product
@@ -2627,24 +4583,17 @@ export default function AdminProductManager() {
           product.category
         )
       ) {
+
         return variants.reduce(
-          (
-            total,
-            colour
-          ) =>
+          (total, colour) =>
             total +
             (
-              colour.sizes ||
-              []
+              colour.sizes || []
             ).reduce(
-              (
-                sum,
-                size
-              ) =>
+              (sum, size) =>
                 sum +
                 Number(
-                  size.stock ||
-                    0
+                  size.stock || 0
                 ),
               0
             ),
@@ -2653,31 +4602,29 @@ export default function AdminProductManager() {
       }
 
       return variants.reduce(
-        (
-          total,
-          variant
-        ) =>
+        (total, variant) =>
           total +
           Number(
-            variant.stock ||
-              0
+            variant.stock || 0
           ),
         0
       );
     };
 
   // ============================================================
-  // RENDER VARIANT SUMMARY
+  // VARIANT SUMMARY
   // ============================================================
 
   const renderVariantSummary =
-    (product) => {
+    product => {
+
       const variants =
         normalizeVariants(
           product
         );
 
       if (!variants.length) {
+
         return (
           <span
             style={{
@@ -2696,11 +4643,13 @@ export default function AdminProductManager() {
 
       return (
         <div className="variant-summary">
+
           {variants.map(
             (
               variant,
               index
             ) => {
+
               const mainImage =
                 variant.mainImage ||
                 variant.main_image ||
@@ -2719,6 +4668,7 @@ export default function AdminProductManager() {
                   key={index}
                   className="variant-colour-row"
                 >
+
                   <span className="colour-chip">
                     {variant.colour ||
                       `Colour ${
@@ -2727,6 +4677,7 @@ export default function AdminProductManager() {
                   </span>
 
                   {dress ? (
+
                     <>
                       {(
                         variant.sizes ||
@@ -2736,6 +4687,7 @@ export default function AdminProductManager() {
                           size,
                           sizeIndex
                         ) => (
+
                           <span
                             className="size-chip"
                             key={
@@ -2744,55 +4696,47 @@ export default function AdminProductManager() {
                           >
                             {size.size}: ₹
                             {Number(
-                              size.price ||
-                                0
+                              size.price || 0
                             ).toLocaleString()}
                             {" / "}
                             {Number(
-                              size.stock ||
-                                0
-                            )}{" "}
-                            pcs
+                              size.stock || 0
+                            )} pcs
                           </span>
                         )
                       )}
                     </>
+
                   ) : (
+
                     <span className="size-chip">
                       ₹
                       {Number(
-                        variant.price ||
-                          0
+                        variant.price || 0
                       ).toLocaleString()}
                       {" / "}
                       {Number(
-                        variant.stock ||
-                          0
-                      )}{" "}
-                      pcs
+                        variant.stock || 0
+                      )} pcs
                     </span>
                   )}
 
-                  {/* Variant images */}
                   {(mainImage ||
                     thumbnails.length >
                       0) && (
+
                     <div className="variant-images-mini">
+
                       {mainImage && (
                         <img
-                          src={
-                            mainImage
-                          }
+                          src={mainImage}
                           className="variant-image-mini"
-                          alt={`${variant.colour} main`}
+                          alt=""
                         />
                       )}
 
                       {thumbnails
-                        .slice(
-                          0,
-                          4
-                        )
+                        .slice(0, 4)
                         .map(
                           (
                             image,
@@ -2806,7 +4750,7 @@ export default function AdminProductManager() {
                                 image
                               }
                               className="variant-image-mini"
-                              alt={`${variant.colour} thumb`}
+                              alt=""
                             />
                           )
                         )}
@@ -2821,7 +4765,7 @@ export default function AdminProductManager() {
     };
 
   // ============================================================
-  // RENDER IMAGE UPLOADS
+  // RENDER COLOUR IMAGES
   // ============================================================
 
   const renderColourImages =
@@ -2829,29 +4773,31 @@ export default function AdminProductManager() {
       variant,
       colourIndex
     ) => {
+
       return (
         <div className="colour-image-section">
+
           <div className="colour-image-title">
-            🖼️ {variant.colour ||
+            🖼️{" "}
+            {variant.colour ||
               `Colour ${
                 colourIndex + 1
-              }`} Images
+              }`}{" "}
+            Images
           </div>
 
           <div className="image-upload-grid">
-            {/* ==================================================
-                MAIN IMAGE
-            ================================================== */}
 
             <div className="image-upload-box">
+
               <label>
-                Main Image for this Colour
+                Main Image
               </label>
 
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) =>
+                onChange={e =>
                   handleVariantMainImage(
                     colourIndex,
                     e
@@ -2861,13 +4807,15 @@ export default function AdminProductManager() {
 
               {variant.mainImage && (
                 <div className="image-preview-row">
+
                   <div className="image-preview-wrapper">
+
                     <img
                       src={
                         variant.mainImage
                       }
                       className="image-preview"
-                      alt={`${variant.colour} main`}
+                      alt=""
                     />
 
                     <button
@@ -2881,32 +4829,24 @@ export default function AdminProductManager() {
                     >
                       ×
                     </button>
+
                   </div>
+
                 </div>
               )}
-
-              {!variant.mainImageFile &&
-                variant.mainImage && (
-                  <div className="existing-image-label">
-                    Existing image
-                  </div>
-                )}
             </div>
 
-            {/* ==================================================
-                THUMBNAILS
-            ================================================== */}
-
             <div className="image-upload-box">
+
               <label>
-                Thumbnail Images for this Colour
+                Thumbnail Images
               </label>
 
               <input
                 type="file"
                 multiple
                 accept="image/*"
-                onChange={(e) =>
+                onChange={e =>
                   handleVariantThumbnails(
                     colourIndex,
                     e
@@ -2916,24 +4856,28 @@ export default function AdminProductManager() {
 
               {variant.thumbnails?.length >
                 0 && (
+
                 <div className="image-preview-row">
+
                   {variant.thumbnails.map(
                     (
                       image,
                       imageIndex
                     ) => (
+
                       <div
                         className="image-preview-wrapper"
                         key={
                           imageIndex
                         }
                       >
+
                         <img
                           src={
                             image
                           }
                           className="image-preview"
-                          alt={`${variant.colour} thumbnail`}
+                          alt=""
                         />
 
                         <button
@@ -2948,6 +4892,7 @@ export default function AdminProductManager() {
                         >
                           ×
                         </button>
+
                       </div>
                     )
                   )}
@@ -2965,6 +4910,7 @@ export default function AdminProductManager() {
 
   const renderVariantBuilder =
     () => {
+
       const dress =
         isDressCategory(
           formData.cat
@@ -2972,6 +4918,7 @@ export default function AdminProductManager() {
 
       return (
         <div className="variant-builder">
+
           <div className="variant-builder-title">
             {dress
               ? "Dress Colour, Images & Size Variants"
@@ -2980,66 +4927,54 @@ export default function AdminProductManager() {
 
           <div className="variant-builder-description">
             {dress
-              ? "Each colour can have different images, thumbnails, sizes, prices and stock."
-              : "Each saree colour can have its own main image, thumbnails, price, MRP, discount and stock."}
+              ? "Each colour can have different images, sizes, prices and stock."
+              : "Each colour can have its own image, price, MRP, discount and stock."}
           </div>
 
           <div className="info-box">
             <strong>
               Example:
             </strong>{" "}
-            Red saree → Red main image +
-            Red thumbnails + ₹2499.
-            Blue saree → Blue main image +
-            Blue thumbnails + ₹2799.
-            Green saree → Green main image +
-            Green thumbnails + ₹2699.
+            Red → Red images + ₹2499.
+            Blue → Blue images + ₹2799.
           </div>
-
-          {formData.variants.length ===
-            0 && (
-            <div className="empty-variants">
-              No colours added yet.
-            </div>
-          )}
 
           {formData.variants.map(
             (
               variant,
               colourIndex
             ) => (
+
               <div
                 className="colour-card"
                 key={colourIndex}
               >
-                {/* ==================================================
-                    HEADER
-                ================================================== */}
 
                 <div className="colour-card-header">
+
                   <div className="colour-card-header-left">
+
                     <strong>
                       Colour{" "}
-                      {colourIndex +
-                        1}
+                      {colourIndex + 1}
                     </strong>
 
                     <input
                       className="colour-name-input"
                       type="text"
-                      placeholder="Enter colour e.g. Red"
+                      placeholder="Red"
                       value={
                         variant.colour ||
                         ""
                       }
-                      onChange={(e) =>
+                      onChange={e =>
                         updateColourName(
                           colourIndex,
-                          e.target
-                            .value
+                          e.target.value
                         )
                       }
                     />
+
                   </div>
 
                   <button
@@ -3053,211 +4988,171 @@ export default function AdminProductManager() {
                   >
                     Remove
                   </button>
+
                 </div>
 
-                {/* ==================================================
-                    BODY
-                ================================================== */}
-
                 <div className="colour-card-body">
-                  {/* COLOUR IMAGES */}
 
                   {renderColourImages(
                     variant,
                     colourIndex
                   )}
 
-                  {/* ==================================================
-                      DRESS
-                  ================================================== */}
-
                   {dress ? (
+
                     <>
                       <div className="size-table-wrapper">
+
                         <table className="size-table">
+
                           <thead>
                             <tr>
-                              <th>
-                                Size
-                              </th>
-
-                              <th>
-                                Price ₹
-                              </th>
-
-                              <th>
-                                MRP ₹
-                              </th>
-
-                              <th>
-                                Discount %
-                              </th>
-
-                              <th>
-                                Stock
-                              </th>
-
-                              <th>
-                                Action
-                              </th>
+                              <th>Size</th>
+                              <th>Price ₹</th>
+                              <th>MRP ₹</th>
+                              <th>Discount %</th>
+                              <th>Stock</th>
+                              <th>Action</th>
                             </tr>
                           </thead>
 
                           <tbody>
-                            {(
-                              variant.sizes ||
-                              []
-                            ).map(
-                              (
-                                size,
-                                sizeIndex
-                              ) => (
-                                <tr
-                                  key={
-                                    sizeIndex
-                                  }
-                                >
-                                  <td>
-                                    <input
-                                      className="size-name-box"
-                                      type="text"
-                                      value={
-                                        size.size ||
-                                        ""
-                                      }
-                                      onChange={(
-                                        e
-                                      ) =>
-                                        updateDressSize(
-                                          colourIndex,
-                                          sizeIndex,
-                                          "size",
-                                          e
-                                            .target
-                                            .value
-                                        )
-                                      }
-                                    />
-                                  </td>
 
-                                  <td>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      placeholder="999"
-                                      value={
-                                        size.price ??
-                                        ""
-                                      }
-                                      onChange={(
-                                        e
-                                      ) =>
-                                        updateDressSize(
-                                          colourIndex,
-                                          sizeIndex,
-                                          "price",
-                                          e
-                                            .target
-                                            .value
-                                        )
-                                      }
-                                    />
-                                  </td>
+                            {(variant.sizes ||
+                              []).map(
+                                (
+                                  size,
+                                  sizeIndex
+                                ) => (
 
-                                  <td>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      placeholder="1299"
-                                      value={
-                                        size.oldPrice ??
-                                        ""
-                                      }
-                                      onChange={(
-                                        e
-                                      ) =>
-                                        updateDressSize(
-                                          colourIndex,
-                                          sizeIndex,
-                                          "oldPrice",
-                                          e
-                                            .target
-                                            .value
-                                        )
-                                      }
-                                    />
-                                  </td>
+                                  <tr
+                                    key={
+                                      sizeIndex
+                                    }
+                                  >
 
-                                  <td>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="100"
-                                      value={
-                                        size.discount ??
-                                        0
-                                      }
-                                      onChange={(
-                                        e
-                                      ) =>
-                                        updateDressSize(
-                                          colourIndex,
-                                          sizeIndex,
-                                          "discount",
-                                          e
-                                            .target
-                                            .value
-                                        )
-                                      }
-                                    />
-                                  </td>
+                                    <td>
+                                      <input
+                                        className="size-name-box"
+                                        value={
+                                          size.size ||
+                                          ""
+                                        }
+                                        onChange={e =>
+                                          updateDressSize(
+                                            colourIndex,
+                                            sizeIndex,
+                                            "size",
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                    </td>
 
-                                  <td>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      placeholder="10"
-                                      value={
-                                        size.stock ??
-                                        ""
-                                      }
-                                      onChange={(
-                                        e
-                                      ) =>
-                                        updateDressSize(
-                                          colourIndex,
-                                          sizeIndex,
-                                          "stock",
-                                          e
-                                            .target
-                                            .value
-                                        )
-                                      }
-                                    />
-                                  </td>
+                                    <td>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={
+                                          size.price ??
+                                          ""
+                                        }
+                                        onChange={e =>
+                                          updateDressSize(
+                                            colourIndex,
+                                            sizeIndex,
+                                            "price",
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                    </td>
 
-                                  <td>
-                                    <button
-                                      type="button"
-                                      className="btn-small btn-red"
-                                      onClick={() =>
-                                        removeSize(
-                                          colourIndex,
-                                          sizeIndex
-                                        )
-                                      }
-                                    >
-                                      ×
-                                    </button>
-                                  </td>
-                                </tr>
-                              )
-                            )}
+                                    <td>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={
+                                          size.oldPrice ??
+                                          ""
+                                        }
+                                        onChange={e =>
+                                          updateDressSize(
+                                            colourIndex,
+                                            sizeIndex,
+                                            "oldPrice",
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                    </td>
+
+                                    <td>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={
+                                          size.discount ??
+                                          0
+                                        }
+                                        onChange={e =>
+                                          updateDressSize(
+                                            colourIndex,
+                                            sizeIndex,
+                                            "discount",
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                    </td>
+
+                                    <td>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={
+                                          size.stock ??
+                                          ""
+                                        }
+                                        onChange={e =>
+                                          updateDressSize(
+                                            colourIndex,
+                                            sizeIndex,
+                                            "stock",
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                    </td>
+
+                                    <td>
+                                      <button
+                                        type="button"
+                                        className="btn-small btn-red"
+                                        onClick={() =>
+                                          removeSize(
+                                            colourIndex,
+                                            sizeIndex
+                                          )
+                                        }
+                                      >
+                                        ×
+                                      </button>
+                                    </td>
+
+                                  </tr>
+                                )
+                              )}
+
                           </tbody>
+
                         </table>
+
                       </div>
 
                       <div className="add-size-row">
+
                         <button
                           type="button"
                           className="btn-small btn-outline"
@@ -3269,95 +5164,70 @@ export default function AdminProductManager() {
                         >
                           + Add Size
                         </button>
+
                       </div>
                     </>
+
                   ) : (
-                    /* ==================================================
-                       SAREE
-                    ================================================== */
 
                     <div className="saree-variant-row">
-                      <div className="variant-field">
-                        <label>
-                          Colour
-                        </label>
 
+                      <div className="variant-field">
+                        <label>Colour</label>
                         <input
-                          type="text"
-                          placeholder="Red"
                           value={
                             variant.colour ||
                             ""
                           }
-                          onChange={(
-                            e
-                          ) =>
+                          onChange={e =>
                             updateColourName(
                               colourIndex,
-                              e.target
-                                .value
+                              e.target.value
                             )
                           }
                         />
                       </div>
 
                       <div className="variant-field">
-                        <label>
-                          Price ₹
-                        </label>
-
+                        <label>Price ₹</label>
                         <input
                           type="number"
                           min="0"
-                          placeholder="2499"
                           value={
                             variant.price ??
                             ""
                           }
-                          onChange={(
-                            e
-                          ) =>
+                          onChange={e =>
                             updateSareeVariant(
                               colourIndex,
                               "price",
-                              e.target
-                                .value
+                              e.target.value
                             )
                           }
                         />
                       </div>
 
                       <div className="variant-field">
-                        <label>
-                          MRP ₹
-                        </label>
-
+                        <label>MRP ₹</label>
                         <input
                           type="number"
                           min="0"
-                          placeholder="2999"
                           value={
                             variant.oldPrice ??
                             ""
                           }
-                          onChange={(
-                            e
-                          ) =>
+                          onChange={e =>
                             updateSareeVariant(
                               colourIndex,
                               "oldPrice",
-                              e.target
-                                .value
+                              e.target.value
                             )
                           }
                         />
                       </div>
 
                       <div className="variant-field">
-                        <label>
-                          Discount %
-                        </label>
-
+                        <label>Discount %</label>
                         <input
                           type="number"
                           min="0"
@@ -3366,60 +5236,50 @@ export default function AdminProductManager() {
                             variant.discount ??
                             0
                           }
-                          onChange={(
-                            e
-                          ) =>
+                          onChange={e =>
                             updateSareeVariant(
                               colourIndex,
                               "discount",
-                              e.target
-                                .value
+                              e.target.value
                             )
                           }
                         />
                       </div>
 
                       <div className="variant-field">
-                        <label>
-                          Stock
-                        </label>
-
+                        <label>Stock</label>
                         <input
                           type="number"
                           min="0"
-                          placeholder="5"
                           value={
                             variant.stock ??
                             ""
                           }
-                          onChange={(
-                            e
-                          ) =>
+                          onChange={e =>
                             updateSareeVariant(
                               colourIndex,
                               "stock",
-                              e.target
-                                .value
+                              e.target.value
                             )
                           }
                         />
                       </div>
 
-                      <div>
-                        <button
-                          type="button"
-                          className="btn-small btn-red"
-                          onClick={() =>
-                            removeColour(
-                              colourIndex
-                            )
-                          }
-                        >
-                          Remove
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        className="btn-small btn-red"
+                        onClick={() =>
+                          removeColour(
+                            colourIndex
+                          )
+                        }
+                      >
+                        Remove
+                      </button>
+
                     </div>
                   )}
+
                 </div>
               </div>
             )
@@ -3432,16 +5292,468 @@ export default function AdminProductManager() {
           >
             + Add Another Colour
           </button>
+
         </div>
       );
     };
 
   // ============================================================
+  // BULK MODAL
+  // ============================================================
+
+  // ============================================================
+// BULK MODAL
+// ============================================================
+const renderBulkModal = () => {
+
+  if (!isBulkModalOpen) {
+    return null;
+  }
+
+  const isCSV = bulkUploadType === "csv";
+
+  const uploadTitle = isCSV
+    ? "📄 Bulk CSV Product Import"
+    : "📊 Bulk Excel Product Import";
+
+  const fileTypeName = isCSV
+    ? "CSV"
+    : "Excel";
+
+  const acceptTypes = isCSV
+    ? ".csv,text/csv"
+    : ".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel";
+
+  const uploadIcon = isCSV ? "📄" : "📊";
+
+  const fileOnlyText = isCSV
+    ? "CSV files only"
+    : "Excel files (.xlsx, .xls) only";
+
+
+  return (
+
+    <div
+      className="modal-overlay"
+      onClick={() =>
+        !bulkUploading &&
+        setBulkModalOpen(false)
+      }
+    >
+
+      <div
+        className="modal-content bulk-modal"
+        onClick={(e) =>
+          e.stopPropagation()
+        }
+      >
+
+        {/* ================================================= */}
+        {/* HEADER */}
+        {/* ================================================= */}
+
+        <div className="bulk-modal-header">
+
+          <div>
+
+            <h2 className="bulk-modal-title">
+              {uploadTitle}
+            </h2>
+
+            <p className="bulk-modal-subtitle">
+              Import multiple products quickly using a {fileTypeName} file.
+            </p>
+
+          </div>
+
+
+          <button
+            type="button"
+            className="bulk-close-btn"
+            disabled={bulkUploading}
+            onClick={() =>
+              setBulkModalOpen(false)
+            }
+          >
+            ×
+          </button>
+
+        </div>
+
+
+        {/* ================================================= */}
+        {/* UPLOAD AREA */}
+        {/* ================================================= */}
+
+        <div className="bulk-upload-wrapper">
+
+          <label
+            className={`bulk-upload-area ${
+              bulkFileName
+                ? "bulk-upload-selected"
+                : ""
+            }`}
+          >
+
+            <input
+              ref={bulkFileRef}
+              type="file"
+              accept={acceptTypes}
+              onChange={handleBulkFile}
+              disabled={bulkUploading}
+            />
+
+
+            {/* ICON */}
+
+            <div className="bulk-upload-icon">
+              {uploadIcon}
+            </div>
+
+
+            {/* MAIN TEXT */}
+
+            <div className="bulk-upload-main-text">
+
+              {bulkFileName
+                ? bulkFileName
+                : `Choose ${fileTypeName} File`
+              }
+
+            </div>
+
+
+            {/* SECONDARY TEXT */}
+
+            <div className="bulk-upload-sub-text">
+
+              {bulkFileName
+                ? "File selected successfully"
+                : "Click here to browse your computer"
+              }
+
+            </div>
+
+
+            {/* FILE TYPE */}
+
+            <div className="bulk-upload-format">
+
+              {fileOnlyText}
+
+            </div>
+
+          </label>
+
+        </div>
+
+
+        {/* ================================================= */}
+        {/* SELECTED FILE */}
+        {/* ================================================= */}
+
+        {bulkFileName && (
+
+          <div className="bulk-selected-file">
+
+            <div className="bulk-selected-left">
+
+              <div className="bulk-selected-icon">
+                {uploadIcon}
+              </div>
+
+              <div>
+
+                <div className="bulk-selected-name">
+                  {bulkFileName}
+                </div>
+
+                <div className="bulk-selected-status">
+                  Ready to import
+                </div>
+
+              </div>
+
+            </div>
+
+
+            {!bulkUploading && (
+
+              <button
+                type="button"
+                className="bulk-remove-file"
+                onClick={() => {
+
+                  setBulkRows([]);
+                  setBulkFileName("");
+                  setBulkErrors([]);
+                  setBulkResult("");
+                  setBulkProgress(0);
+
+                  if (bulkFileRef.current) {
+                    bulkFileRef.current.value = "";
+                  }
+
+                }}
+              >
+                Remove
+              </button>
+
+            )}
+
+          </div>
+
+        )}
+
+
+        {/* ================================================= */}
+        {/* PREVIEW */}
+        {/* ================================================= */}
+
+        {bulkRows.length > 0 && (
+
+          <div className="bulk-preview-section">
+
+            <div className="bulk-preview-header">
+
+              <div>
+
+                <div className="bulk-preview-title">
+                  Product Preview
+                </div>
+
+                <div className="bulk-preview-count">
+                  {bulkRows.length} {fileTypeName} rows detected
+                </div>
+
+              </div>
+
+              <div className="bulk-preview-badge">
+                {bulkRows.length} Rows
+              </div>
+
+            </div>
+
+
+            <div className="bulk-preview">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+
+                    {Object.keys(
+                      bulkRows[0]
+                    ).map((header) => (
+
+                      <th key={header}>
+                        {header}
+                      </th>
+
+                    ))}
+
+                  </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                  {bulkRows
+                    .slice(0, 10)
+                    .map((row, index) => (
+
+                      <tr key={index}>
+
+                        {Object.keys(
+                          bulkRows[0]
+                        ).map((header) => (
+
+                          <td key={header}>
+
+                            {String(
+                              row[header] ?? ""
+                            )}
+
+                          </td>
+
+                        ))}
+
+                      </tr>
+
+                    ))}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+
+            {bulkRows.length > 10 && (
+
+              <div className="bulk-preview-note">
+
+                Showing the first 10 rows only.
+
+              </div>
+
+            )}
+
+          </div>
+
+        )}
+
+
+        {/* ================================================= */}
+        {/* PROGRESS */}
+        {/* ================================================= */}
+
+        {bulkUploading && (
+
+          <div className="bulk-progress-section">
+
+            <div className="bulk-progress-header">
+
+              <span>
+                Uploading products...
+              </span>
+
+              <strong>
+                {bulkProgress}%
+              </strong>
+
+            </div>
+
+
+            <div className="bulk-progress">
+
+              <div
+                className="bulk-progress-bar"
+                style={{
+                  width: `${bulkProgress}%`
+                }}
+              />
+
+            </div>
+
+          </div>
+
+        )}
+
+
+        {/* ================================================= */}
+        {/* SUCCESS */}
+        {/* ================================================= */}
+
+        {bulkResult && (
+
+          <div className="bulk-result">
+
+            <span className="bulk-result-icon">
+              ✓
+            </span>
+
+            <span>
+              {bulkResult}
+            </span>
+
+          </div>
+
+        )}
+
+
+        {/* ================================================= */}
+        {/* ERRORS */}
+        {/* ================================================= */}
+
+        {bulkErrors.length > 0 && (
+
+          <div className="bulk-error">
+
+            <div className="bulk-error-title">
+              ⚠ Upload Errors
+            </div>
+
+
+            <ul>
+
+              {bulkErrors.map(
+                (error, index) => (
+
+                  <li key={index}>
+                    {error}
+                  </li>
+
+                )
+              )}
+
+            </ul>
+
+          </div>
+
+        )}
+
+
+        {/* ================================================= */}
+        {/* FOOTER */}
+        {/* ================================================= */}
+
+        <div className="bulk-modal-footer">
+
+          <button
+            type="button"
+            className="bulk-cancel-btn"
+            disabled={bulkUploading}
+            onClick={() =>
+              setBulkModalOpen(false)
+            }
+          >
+            Cancel
+          </button>
+
+
+          <button
+            type="button"
+            className="bulk-import-btn"
+            disabled={
+              bulkUploading ||
+              !bulkRows.length
+            }
+            onClick={
+              handleBulkUpload
+            }
+          >
+
+            {bulkUploading
+
+              ? `Uploading ${bulkProgress}%...`
+
+              : `🚀 Import ${
+                  buildBulkProducts(
+                    bulkRows
+                  ).length
+                } Products`
+
+            }
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  );
+};  // ============================================================
   // RETURN
   // ============================================================
 
   return (
     <div className="admin-container">
+
       <style>
         {adminStyles}
       </style>
@@ -3451,27 +5763,59 @@ export default function AdminProductManager() {
       ======================================================== */}
 
       <div className="admin-header">
+
         <div>
+
           <h1>
             Inventory Management
           </h1>
 
           <p>
             Manage products, colours,
-            colour-specific images,
-            thumbnails, sizes, prices
-            and stock.
+            images, sizes, prices and stock.
           </p>
+
         </div>
 
-        <button
-          className="btn-add"
-          onClick={() =>
-            handleOpenModal()
-          }
-        >
-          + Add New Product
-        </button>
+<div className="header-buttons">
+
+  {/* BULK CSV UPLOAD */}
+
+  <button
+    className="btn-bulk"
+    onClick={() =>
+      resetBulkUpload("csv")
+    }
+  >
+    📄 Bulk CSV Upload
+  </button>
+
+
+  {/* BULK EXCEL UPLOAD */}
+
+  <button
+    className="btn-bulk"
+    onClick={() =>
+      resetBulkUpload("excel")
+    }
+  >
+    📊 Bulk Excel Upload
+  </button>
+
+
+  {/* ADD PRODUCT */}
+
+  <button
+    className="btn-add"
+    onClick={() =>
+      handleOpenModal()
+    }
+  >
+    + Add New Product
+  </button>
+
+</div>
+
       </div>
 
       {/* ========================================================
@@ -3479,15 +5823,21 @@ export default function AdminProductManager() {
       ======================================================== */}
 
       {errorMessage && (
+
         <div
           style={{
-            background: "#fff0f0",
+            background:
+              "#fff0f0",
             border:
               "1px solid #ffcaca",
-            color: "#b42318",
-            padding: "12px 14px",
-            borderRadius: "8px",
-            marginBottom: "16px"
+            color:
+              "#b42318",
+            padding:
+              "12px 14px",
+            borderRadius:
+              "8px",
+            marginBottom:
+              "16px"
           }}
         >
           {errorMessage}
@@ -3499,9 +5849,13 @@ export default function AdminProductManager() {
       ======================================================== */}
 
       <div className="table-wrapper">
+
         <table>
+
           <thead>
+
             <tr>
+
               <th>
                 Main Image
               </th>
@@ -3527,8 +5881,7 @@ export default function AdminProductManager() {
               </th>
 
               <th>
-                Colour / Size /
-                Price / Images
+                Colour / Size / Price
               </th>
 
               <th>
@@ -3538,13 +5891,17 @@ export default function AdminProductManager() {
               <th>
                 Actions
               </th>
+
             </tr>
+
           </thead>
 
           <tbody>
-            {products.length ===
-            0 ? (
+
+            {products.length === 0 ? (
+
               <tr>
+
                 <td
                   colSpan="9"
                   style={{
@@ -3558,16 +5915,22 @@ export default function AdminProductManager() {
                 >
                   No products found.
                 </td>
+
               </tr>
+
             ) : (
+
               products.map(
-                (p) => (
+                p => (
+
                   <tr
-                    key={p.id}
+                    key={
+                      p.id
+                    }
                   >
-                    {/* Main image */}
 
                     <td>
+
                       <img
                         src={
                           p.img_url ||
@@ -3579,12 +5942,13 @@ export default function AdminProductManager() {
                           p.name
                         }
                       />
+
                     </td>
 
-                    {/* Main thumbnails */}
-
                     <td>
+
                       <div className="thumbnail-container">
+
                         {(
                           p.thumbnails ||
                           []
@@ -3593,6 +5957,7 @@ export default function AdminProductManager() {
                             t,
                             i
                           ) => (
+
                             <img
                               key={
                                 i
@@ -3601,20 +5966,21 @@ export default function AdminProductManager() {
                                 t
                               }
                               className="prod-img-mini"
-                              alt={`thumb-${i}`}
+                              alt=""
                             />
                           )
                         )}
+
                       </div>
+
                     </td>
 
-                    {/* Product */}
-
                     <td>
+
                       <div
                         style={{
                           fontWeight:
-                            "600"
+                            600
                         }}
                       >
                         {p.name}
@@ -3628,26 +5994,21 @@ export default function AdminProductManager() {
                             "#999"
                         }}
                       >
-                        ID: #
-                        {
-                          p.id
-                        }
+                        ID: #{p.id}
                       </div>
+
                     </td>
 
-                    {/* Category */}
-
                     <td>
+
                       <span className="status-badge">
-                        {
-                          p.category
-                        }
+                        {p.category}
                       </span>
+
                     </td>
 
-                    {/* Sub category */}
-
                     <td>
+
                       <span
                         className="status-badge"
                         style={{
@@ -3661,11 +6022,11 @@ export default function AdminProductManager() {
                           p.subCategory ||
                           "-"}
                       </span>
+
                     </td>
 
-                    {/* Type */}
-
                     <td>
+
                       <span
                         className="status-badge"
                         style={{
@@ -3678,9 +6039,8 @@ export default function AdminProductManager() {
                         {p.type ||
                           "Regular"}
                       </span>
-                    </td>
 
-                    {/* Variants */}
+                    </td>
 
                     <td>
                       {renderVariantSummary(
@@ -3688,21 +6048,21 @@ export default function AdminProductManager() {
                       )}
                     </td>
 
-                    {/* Stock */}
-
                     <td>
+
                       <strong>
                         {getTotalVariantStock(
                           p
                         )}
                       </strong>{" "}
                       pcs
+
                     </td>
 
-                    {/* Actions */}
-
                     <td>
+
                       <div className="action-btns">
+
                         <button
                           className="btn-edit"
                           onClick={() =>
@@ -3724,14 +6084,20 @@ export default function AdminProductManager() {
                         >
                           Delete
                         </button>
+
                       </div>
+
                     </td>
+
                   </tr>
                 )
               )
             )}
+
           </tbody>
+
         </table>
+
       </div>
 
       {/* ========================================================
@@ -3739,13 +6105,19 @@ export default function AdminProductManager() {
       ======================================================== */}
 
       <div className="mobile-card-container">
+
         {products.map(
-          (p) => (
+          p => (
+
             <div
               className="product-card"
-              key={p.id}
+              key={
+                p.id
+              }
             >
+
               <div className="card-top">
+
                 <img
                   src={
                     p.img_url ||
@@ -3753,59 +6125,51 @@ export default function AdminProductManager() {
                     ""
                   }
                   className="card-main-img"
-                  alt={p.name}
+                  alt={
+                    p.name
+                  }
                 />
 
                 <div className="card-info">
+
                   <div
                     style={{
                       fontSize:
                         "0.7rem",
                       color:
-                        "#999",
-                      marginBottom:
-                        "2px"
+                        "#999"
                     }}
                   >
-                    ID: #
-                    {
-                      p.id
-                    }
+                    ID: #{p.id}
                   </div>
 
                   <div
                     style={{
                       fontWeight:
-                        "700",
+                        700,
                       fontSize:
                         "0.95rem",
-                      color:
-                        "var(--text-dark)",
-                      marginBottom:
-                        "6px",
-                      lineHeight:
-                        "1.2"
+                      margin:
+                        "5px 0"
                     }}
                   >
                     {p.name}
                   </div>
 
-                  <div>
-                    <span className="status-badge">
-                      {
-                        p.category
-                      }
-                    </span>
-                  </div>
+                  <span className="status-badge">
+                    {p.category}
+                  </span>
+
                 </div>
+
               </div>
 
               <div className="card-grid">
+
                 <div className="card-field">
                   <label>
                     Sub-Category
                   </label>
-
                   <span>
                     {p.sub_category ||
                       p.subCategory ||
@@ -3817,7 +6181,6 @@ export default function AdminProductManager() {
                   <label>
                     Type
                   </label>
-
                   <span>
                     {p.type ||
                       "Regular"}
@@ -3828,7 +6191,6 @@ export default function AdminProductManager() {
                   <label>
                     Colours
                   </label>
-
                   <span>
                     {
                       normalizeVariants(
@@ -3842,7 +6204,6 @@ export default function AdminProductManager() {
                   <label>
                     Total Stock
                   </label>
-
                   <span>
                     {getTotalVariantStock(
                       p
@@ -3850,6 +6211,7 @@ export default function AdminProductManager() {
                     pcs
                   </span>
                 </div>
+
               </div>
 
               <div
@@ -3863,32 +6225,8 @@ export default function AdminProductManager() {
                 )}
               </div>
 
-              {p.thumbnails &&
-                p.thumbnails
-                  .length >
-                  0 && (
-                  <div className="card-thumbnails-row">
-                    {p.thumbnails.map(
-                      (
-                        t,
-                        i
-                      ) => (
-                        <img
-                          key={
-                            i
-                          }
-                          src={
-                            t
-                          }
-                          className="prod-img-mini"
-                          alt={`thumb-${i}`}
-                        />
-                      )
-                    )}
-                  </div>
-                )}
-
               <div className="card-actions">
+
                 <button
                   className="btn-edit"
                   onClick={() =>
@@ -3910,41 +6248,47 @@ export default function AdminProductManager() {
                 >
                   Delete
                 </button>
+
               </div>
+
             </div>
           )
         )}
+
       </div>
 
       {/* ========================================================
-          MODAL
+          BULK MODAL
+      ======================================================== */}
+
+      {renderBulkModal()}
+
+      {/* ========================================================
+          NORMAL PRODUCT MODAL
       ======================================================== */}
 
       {isModalOpen && (
+
         <div
           className="modal-overlay"
           onClick={() =>
             !saving &&
-            setModalOpen(
-              false
-            )
+            setModalOpen(false)
           }
         >
+
           <div
             className="modal-content"
-            onClick={(e) =>
+            onClick={e =>
               e.stopPropagation()
             }
           >
+
             <h2
               style={{
-                marginBottom:
-                  "20px",
-                color:
-                  "var(--primary-green)",
                 marginTop: 0,
-                fontSize:
-                  "1.4rem"
+                color:
+                  "var(--primary-green)"
               }}
             >
               {currentProduct
@@ -3957,11 +6301,11 @@ export default function AdminProductManager() {
                 handleSave
               }
             >
-              {/* ==================================================
-                  NAME
-              ================================================== */}
+
+              {/* NAME */}
 
               <div className="form-group">
+
                 <label>
                   Product Name
                 </label>
@@ -3972,25 +6316,24 @@ export default function AdminProductManager() {
                   value={
                     formData.name
                   }
-                  onChange={(e) =>
+                  onChange={e =>
                     setFormData(
-                      (prev) => ({
+                      prev => ({
                         ...prev,
-                        name: e
-                          .target
-                          .value
+                        name:
+                          e.target.value
                       })
                     )
                   }
-                  placeholder="Example: Designer Kanchipuram Silk Saree"
+                  placeholder="Designer Kanchipuram Silk Saree"
                 />
+
               </div>
 
-              {/* ==================================================
-                  CATEGORY
-              ================================================== */}
+              {/* CATEGORY */}
 
               <div className="form-group">
+
                 <label>
                   Category
                 </label>
@@ -3999,17 +6342,18 @@ export default function AdminProductManager() {
                   value={
                     formData.cat
                   }
-                  onChange={(e) =>
+                  onChange={e =>
                     handleCategoryChange(
-                      e.target
-                        .value
+                      e.target.value
                     )
                   }
                 >
+
                   {Object.keys(
                     subCategoriesMap
                   ).map(
-                    (cat) => (
+                    cat => (
+
                       <option
                         key={
                           cat
@@ -4020,16 +6364,18 @@ export default function AdminProductManager() {
                       >
                         {cat}
                       </option>
+
                     )
                   )}
+
                 </select>
+
               </div>
 
-              {/* ==================================================
-                  SUB CATEGORY
-              ================================================== */}
+              {/* SUB CATEGORY */}
 
               <div className="form-group">
+
                 <label>
                   Sub-Category
                 </label>
@@ -4038,18 +6384,17 @@ export default function AdminProductManager() {
                   value={
                     formData.subCat
                   }
-                  onChange={(e) =>
+                  onChange={e =>
                     setFormData(
-                      (prev) => ({
+                      prev => ({
                         ...prev,
                         subCat:
-                          e
-                            .target
-                            .value
+                          e.target.value
                       })
                     )
                   }
                 >
+
                   <option value="">
                     Select Sub-Category
                   </option>
@@ -4059,7 +6404,8 @@ export default function AdminProductManager() {
                       formData.cat
                     ] || []
                   ).map(
-                    (sub) => (
+                    sub => (
+
                       <option
                         key={
                           sub
@@ -4070,16 +6416,18 @@ export default function AdminProductManager() {
                       >
                         {sub}
                       </option>
+
                     )
                   )}
+
                 </select>
+
               </div>
 
-              {/* ==================================================
-                  TYPE
-              ================================================== */}
+              {/* TYPE */}
 
               <div className="form-group">
+
                 <label>
                   Product Type
                 </label>
@@ -4088,17 +6436,17 @@ export default function AdminProductManager() {
                   value={
                     formData.type
                   }
-                  onChange={(e) =>
+                  onChange={e =>
                     setFormData(
-                      (prev) => ({
+                      prev => ({
                         ...prev,
-                        type: e
-                          .target
-                          .value
+                        type:
+                          e.target.value
                       })
                     )
                   }
                 >
+
                   <option>
                     New Arrival
                   </option>
@@ -4110,45 +6458,44 @@ export default function AdminProductManager() {
                   <option>
                     Regular
                   </option>
+
                 </select>
+
               </div>
 
-              {/* ==================================================
-                  COLOUR VARIANTS
-              ================================================== */}
+              {/* VARIANTS */}
 
               {renderVariantBuilder()}
 
-              {/* ==================================================
-                  OPTIONAL PRODUCT MAIN IMAGE
-              ================================================== */}
+              {/* PRODUCT IMAGE */}
 
               <div
                 className="form-group"
                 style={{
                   marginTop:
-                    "20px"
+                    20
                 }}
               >
+
                 <label>
                   Product Main Image
+                  {" "}
                   <span
                     style={{
                       fontWeight:
-                        "400",
+                        400,
                       color:
                         "#888"
                     }}
                   >
-                    {" "}
-                    (optional when colour images are used)
+                    optional
                   </span>
                 </label>
 
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) =>
+                  onChange={e =>
                     handleImageChange(
                       e,
                       "img"
@@ -4157,45 +6504,36 @@ export default function AdminProductManager() {
                 />
 
                 {formData.img && (
+
                   <img
                     src={
                       formData.img
                     }
-                    className="thumbnail-preview"
+                    className="image-preview"
                     style={{
                       marginTop:
-                        "8px"
+                        8
                     }}
-                    alt="Product Preview"
+                    alt=""
                   />
+
                 )}
+
               </div>
 
-              {/* ==================================================
-                  OPTIONAL PRODUCT THUMBNAILS
-              ================================================== */}
+              {/* THUMBNAILS */}
 
               <div className="form-group">
+
                 <label>
                   Product Thumbnail Images
-                  <span
-                    style={{
-                      fontWeight:
-                        "400",
-                      color:
-                        "#888"
-                    }}
-                  >
-                    {" "}
-                    (optional)
-                  </span>
                 </label>
 
                 <input
                   type="file"
                   multiple
                   accept="image/*"
-                  onChange={(e) =>
+                  onChange={e =>
                     handleImageChange(
                       e,
                       "thumbnails"
@@ -4203,47 +6541,21 @@ export default function AdminProductManager() {
                   }
                 />
 
-                <div
-                  className="thumbnail-container"
-                  style={{
-                    marginTop:
-                      "8px"
-                  }}
-                >
-                  {formData.thumbnails.map(
-                    (
-                      t,
-                      i
-                    ) => (
-                      <img
-                        key={
-                          i
-                        }
-                        src={
-                          t
-                        }
-                        className="thumbnail-preview"
-                        alt={`thumb-${i}`}
-                      />
-                    )
-                  )}
-                </div>
               </div>
 
-              {/* ==================================================
-                  ACTIONS
-              ================================================== */}
+              {/* ACTIONS */}
 
               <div className="modal-actions">
+
                 <button
                   type="button"
+                  disabled={
+                    saving
+                  }
                   onClick={() =>
                     setModalOpen(
                       false
                     )
-                  }
-                  disabled={
-                    saving
                   }
                   style={{
                     border:
@@ -4251,11 +6563,9 @@ export default function AdminProductManager() {
                     background:
                       "none",
                     cursor:
-                      saving
-                        ? "not-allowed"
-                        : "pointer",
+                      "pointer",
                     fontWeight:
-                      "600",
+                      600,
                     color:
                       "var(--text-muted)"
                   }}
@@ -4269,14 +6579,6 @@ export default function AdminProductManager() {
                   disabled={
                     saving
                   }
-                  style={{
-                    padding:
-                      "10px 20px",
-                    opacity:
-                      saving
-                        ? 0.6
-                        : 1
-                  }}
                 >
                   {saving
                     ? "Saving..."
@@ -4284,11 +6586,16 @@ export default function AdminProductManager() {
                     ? "Update Product"
                     : "Save Product"}
                 </button>
+
               </div>
+
             </form>
+
           </div>
+
         </div>
       )}
+
     </div>
   );
 }
