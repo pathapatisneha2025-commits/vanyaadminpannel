@@ -17,7 +17,7 @@ const AdminLoginPage = () => {
     setLoading(true);
 
     try {
-      const res = await fetch('https://partyhousedatabase-rpft.onrender.com/admin/login', {
+      const res = await fetch('https://api2.ajpartyhouse.in/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
