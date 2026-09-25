@@ -43,12 +43,26 @@ const VanyaLayout = () => {
         </div>
 
       <nav style={styles.nav}>
+          <Link 
+    to="/admin/categories" 
+    style={styles.navItem} 
+    onClick={() => isMobile && setSidebarOpen(false)}
+  >
+    👗 Manage categories
+  </Link>
   <Link 
     to="/admin/products" 
     style={styles.navItem} 
     onClick={() => isMobile && setSidebarOpen(false)}
   >
     👗 Manage Products
+  </Link>
+  <Link 
+    to="/admin/banner" 
+    style={styles.navItem} 
+    onClick={() => isMobile && setSidebarOpen(false)}
+  >
+    👗 Banner Management
   </Link>
   <Link 
     to="/admin/orders" 

@@ -7,6 +7,8 @@ import AdminContactPage from "./Pages/AdminContactPage";
 import AddCouponForm from "./Pages/AdminCoupons";
 import AdminLoginPage from "./Pages/AdminLoginPage";
 import OnlinePaymentSettings from "./Pages/OnlinePaymentSettings";
+import CollectionManagement from "./Pages/AdminCOllection";
+import BannerManagement from "./Pages/BannerManagement";
 
 export default function App() {
   return (
@@ -26,6 +28,9 @@ export default function App() {
           {/* Products page */}
 
           <Route path="products" element={<AdminProductManager />} />
+                    <Route path="categories" element={<CollectionManagement/>} />
+                    <Route path="banner" element={<BannerManagement/>} />
+
            <Route path="orders" element={<AdminOrders />} />
             <Route path="dashboard" element={<AdminDashboard/>} />
              <Route path="contact" element={<AdminContactPage/>} />
