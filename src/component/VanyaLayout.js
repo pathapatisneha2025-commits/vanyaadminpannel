@@ -57,11 +57,11 @@ const VanyaLayout = () => {
   // NAVIGATION ITEMS
   // --------------------------------------------------
   const navItems = [
-    {
-      name: "Dashboard",
-      path: "/admin",
-      icon: LayoutDashboard,
-    },
+    // {
+    //   name: "Dashboard",
+    //   path: "/admin",
+    //   icon: LayoutDashboard,
+    // },
     {
       name: "Manage Categories",
       path: "/admin/categories",
