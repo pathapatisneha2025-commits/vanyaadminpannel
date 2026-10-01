@@ -153,7 +153,41 @@ const AdminOrders = () => {
       setProcessingPayment(null);
     }
   };
+const infoCardStyle = {
+  background: "#fafafa",
+  border: "1px solid #eee",
+  borderRadius: 9,
+  padding: "12px 14px",
+  boxSizing: "border-box",
+  minWidth: 0,
+};
 
+const infoLabelStyle = {
+  fontSize: 11,
+  color: "#777",
+  fontWeight: 600,
+  textTransform: "uppercase",
+  marginBottom: 5,
+};
+
+const infoValueStyle = {
+  fontSize: 14,
+  color: "#222",
+  fontWeight: 500,
+};
+
+const modalTableHeader = {
+  padding: "11px 10px",
+  textAlign: "left",
+  fontSize: 12,
+  whiteSpace: "nowrap",
+};
+
+const modalTableCell = {
+  padding: "12px 10px",
+  borderTop: "1px solid #eee",
+  verticalAlign: "middle",
+};
   // ============================
   // DELETE ORDER
   // ============================
@@ -637,502 +671,715 @@ const AdminOrders = () => {
       {/* =====================================
           ORDER DETAILS MODAL
       ===================================== */}
-      {selectedOrder && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 999,
-            padding: 20,
-          }}
-          onClick={() => setSelectedOrder(null)}
-        >
+     {/* =====================================
+    ORDER DETAILS MODAL
+===================================== */}
+{selectedOrder && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.65)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 9999,
+      padding: "15px",
+      boxSizing: "border-box",
+    }}
+    onClick={() => setSelectedOrder(null)}
+  >
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: "15px",
+        width: "100%",
+        maxWidth: "900px",
+        maxHeight: "92vh",
+        overflowY: "auto",
+        position: "relative",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* HEADER */}
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: "#fff",
+          padding: "18px 22px",
+          borderBottom: "1px solid #eee",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div>
           <div
             style={{
-              background: "#fff",
-              borderRadius: 12,
-              width: "900px",
-              maxWidth: "95%",
-              maxHeight: "90%",
-              overflowY: "auto",
-              padding: 30,
-              position: "relative",
+              fontSize: 11,
+              color: "#777",
+              marginBottom: 4,
+              letterSpacing: 0.5,
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            {/* CLOSE */}
-            <button
-              onClick={() => setSelectedOrder(null)}
+            ORDER DETAILS
+          </div>
+
+          <h2
+            style={{
+              margin: 0,
+              color: "#063b2a",
+              fontSize: 22,
+            }}
+          >
+            Order #{selectedOrder.id}
+          </h2>
+        </div>
+
+        <button
+          onClick={() => setSelectedOrder(null)}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            border: "none",
+            background: "#f1f1f1",
+            color: "#333",
+            fontSize: 22,
+            cursor: "pointer",
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      {/* BODY */}
+      <div
+        style={{
+          padding: "22px",
+        }}
+      >
+        {/* ============================
+            CUSTOMER INFORMATION
+        ============================ */}
+
+        <h3
+          style={{
+            color: "#063b2a",
+            margin: "0 0 15px",
+            fontSize: 17,
+          }}
+        >
+          Customer Information
+        </h3>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 12,
+            marginBottom: 25,
+          }}
+        >
+          <div style={infoCardStyle}>
+            <div style={infoLabelStyle}>Full Name</div>
+            <div style={infoValueStyle}>
+              {selectedOrder.full_name || "-"}
+            </div>
+          </div>
+
+          <div style={infoCardStyle}>
+            <div style={infoLabelStyle}>Email</div>
+            <div
               style={{
-                position: "absolute",
-                top: 15,
-                right: 15,
-                background: "#ff5252",
+                ...infoValueStyle,
+                wordBreak: "break-word",
+              }}
+            >
+              {selectedOrder.email || "-"}
+            </div>
+          </div>
+
+          <div style={infoCardStyle}>
+            <div style={infoLabelStyle}>Phone</div>
+            <div style={infoValueStyle}>
+              {selectedOrder.phone || "-"}
+            </div>
+          </div>
+
+          <div style={infoCardStyle}>
+            <div style={infoLabelStyle}>
+              Payment Method
+            </div>
+
+            <div
+              style={{
+                ...infoValueStyle,
+                textTransform: "capitalize",
+              }}
+            >
+              {selectedOrder.payment_method || "-"}
+            </div>
+          </div>
+
+          <div
+            style={{
+              ...infoCardStyle,
+              gridColumn: "1 / -1",
+            }}
+          >
+            <div style={infoLabelStyle}>
+              Delivery Address
+            </div>
+
+            <div
+              style={{
+                ...infoValueStyle,
+                lineHeight: 1.5,
+                wordBreak: "break-word",
+              }}
+            >
+              {selectedOrder.address || "-"}
+
+              {selectedOrder.city
+                ? `, ${selectedOrder.city}`
+                : ""}
+
+              {selectedOrder.state
+                ? `, ${selectedOrder.state}`
+                : ""}
+
+              {selectedOrder.pin_code
+                ? ` - ${selectedOrder.pin_code}`
+                : ""}
+            </div>
+          </div>
+        </div>
+
+        {/* ============================
+            PAYMENT INFORMATION
+        ============================ */}
+
+        <h3
+          style={{
+            color: "#063b2a",
+            margin: "0 0 15px",
+            fontSize: 17,
+          }}
+        >
+          Payment Information
+        </h3>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: 12,
+            marginBottom: 25,
+          }}
+        >
+          {/* TOTAL */}
+          <div style={infoCardStyle}>
+            <div style={infoLabelStyle}>
+              Total Amount
+            </div>
+
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: "bold",
+                color: "#063b2a",
+              }}
+            >
+              ₹
+              {parseFloat(
+                selectedOrder.total_amount || 0
+              ).toLocaleString("en-IN")}
+            </div>
+          </div>
+
+          {/* STATUS */}
+          <div style={infoCardStyle}>
+            <div style={infoLabelStyle}>
+              Payment Status
+            </div>
+
+            <div style={{ marginTop: 5 }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  padding: "6px 12px",
+                  borderRadius: 20,
+                  fontWeight: "bold",
+                  fontSize: 12,
+                  textTransform: "capitalize",
+                  ...getPaymentStatusStyle(
+                    selectedOrder.payment_status
+                  ),
+                }}
+              >
+                {selectedOrder.payment_status ||
+                  "pending"}
+              </span>
+            </div>
+          </div>
+
+          {/* SUBMITTED */}
+          {selectedOrder.payment_submitted_at && (
+            <div style={infoCardStyle}>
+              <div style={infoLabelStyle}>
+                Payment Submitted
+              </div>
+
+              <div style={infoValueStyle}>
+                {new Date(
+                  selectedOrder.payment_submitted_at
+                ).toLocaleString()}
+              </div>
+            </div>
+          )}
+
+          {/* VERIFIED */}
+          {selectedOrder.payment_verified_at && (
+            <div style={infoCardStyle}>
+              <div style={infoLabelStyle}>
+                Payment Verified
+              </div>
+
+              <div style={infoValueStyle}>
+                {new Date(
+                  selectedOrder.payment_verified_at
+                ).toLocaleString()}
+              </div>
+            </div>
+          )}
+
+          {/* REJECTED */}
+          {selectedOrder.payment_rejected_reason && (
+            <div
+              style={{
+                ...infoCardStyle,
+                gridColumn: "1 / -1",
+                background: "#fff5f5",
+                border: "1px solid #f5c2c7",
+              }}
+            >
+              <div
+                style={{
+                  ...infoLabelStyle,
+                  color: "#dc3545",
+                }}
+              >
+                Rejection Reason
+              </div>
+
+              <div
+                style={{
+                  ...infoValueStyle,
+                  color: "#dc3545",
+                }}
+              >
+                {selectedOrder.payment_rejected_reason}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ============================
+            PAYMENT SCREENSHOT
+        ============================ */}
+
+        <h3
+          style={{
+            color: "#063b2a",
+            margin: "0 0 15px",
+            fontSize: 17,
+          }}
+        >
+          Payment Screenshot
+        </h3>
+
+        {getPaymentScreenshot(selectedOrder) ? (
+          <div
+            style={{
+              background: "#f8f8f8",
+              borderRadius: 12,
+              padding: 18,
+              marginBottom: 25,
+              textAlign: "center",
+              border: "1px solid #eee",
+            }}
+          >
+            <img
+              src={getPaymentScreenshot(selectedOrder)}
+              alt="Payment Screenshot"
+              onClick={() =>
+                setPreviewImage(
+                  getPaymentScreenshot(selectedOrder)
+                )
+              }
+              style={{
+                width: "100%",
+                maxWidth: 320,
+                height: 320,
+                objectFit: "contain",
+                borderRadius: 8,
+                cursor: "pointer",
+                background: "#fff",
+                border: "1px solid #ddd",
+              }}
+            />
+
+            <br />
+
+            <button
+              onClick={() =>
+                setPreviewImage(
+                  getPaymentScreenshot(selectedOrder)
+                )
+              }
+              style={{
+                marginTop: 12,
+                padding: "9px 18px",
+                background: "#063b2a",
                 color: "#fff",
                 border: "none",
-                borderRadius: "50%",
-                width: 30,
-                height: 30,
+                borderRadius: 7,
                 cursor: "pointer",
                 fontWeight: "bold",
               }}
             >
-              X
+              View Full Screenshot
             </button>
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: 18,
+              background: "#f8f8f8",
+              borderRadius: 10,
+              color: "#999",
+              textAlign: "center",
+              marginBottom: 25,
+            }}
+          >
+            No payment screenshot uploaded.
+          </div>
+        )}
 
-            <h2
+        {/* ============================
+            PAYMENT ACTIONS
+        ============================ */}
+
+        {(selectedOrder.payment_status === "pending" ||
+          selectedOrder.order_status ===
+            "payment_pending") && (
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+              marginBottom: 28,
+            }}
+          >
+            <button
+              disabled={
+                processingPayment ===
+                  selectedOrder.id ||
+                !getPaymentScreenshot(selectedOrder)
+              }
+              onClick={() =>
+                approvePayment(selectedOrder)
+              }
               style={{
-                marginBottom: 20,
-                color: "#063b2a",
+                flex: "1 1 200px",
+                padding: "12px 18px",
+                background:
+                  processingPayment ===
+                    selectedOrder.id ||
+                  !getPaymentScreenshot(selectedOrder)
+                    ? "#aaa"
+                    : "#198754",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                cursor:
+                  processingPayment ===
+                    selectedOrder.id ||
+                  !getPaymentScreenshot(selectedOrder)
+                    ? "not-allowed"
+                    : "pointer",
+                fontWeight: "bold",
               }}
             >
-              Order Details (ID: #{selectedOrder.id})
-            </h2>
+              {processingPayment === selectedOrder.id
+                ? "Processing..."
+                : "✓ Approve Payment"}
+            </button>
 
-            {/* ORDER INFORMATION */}
+            <button
+              disabled={
+                processingPayment === selectedOrder.id
+              }
+              onClick={() =>
+                rejectPayment(selectedOrder)
+              }
+              style={{
+                flex: "1 1 200px",
+                padding: "12px 18px",
+                background:
+                  processingPayment === selectedOrder.id
+                    ? "#aaa"
+                    : "#dc3545",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                cursor:
+                  processingPayment === selectedOrder.id
+                    ? "not-allowed"
+                    : "pointer",
+                fontWeight: "bold",
+              }}
+            >
+              ✕ Reject Payment
+            </button>
+          </div>
+        )}
+
+        {/* ============================
+            ORDER ITEMS
+        ============================ */}
+
+        <h3
+          style={{
+            color: "#063b2a",
+            margin: "0 0 15px",
+            fontSize: 17,
+          }}
+        >
+          Order Items
+        </h3>
+
+        {selectedOrder.items &&
+        selectedOrder.items.length > 0 ? (
+          <div
+            style={{
+              border: "1px solid #eee",
+              borderRadius: 12,
+              overflowX: "auto",
+              marginBottom: 25,
+            }}
+          >
             <table
               style={{
                 width: "100%",
+                minWidth: 650,
                 borderCollapse: "collapse",
-                marginBottom: 25,
               }}
             >
+              <thead
+                style={{
+                  background: "#063b2a",
+                  color: "#fff",
+                }}
+              >
+                <tr>
+                  <th style={modalTableHeader}>
+                    Image
+                  </th>
+
+                  <th style={modalTableHeader}>
+                    Product
+                  </th>
+
+                  <th style={modalTableHeader}>
+                    Quantity
+                  </th>
+
+                  <th style={modalTableHeader}>
+                    Price
+                  </th>
+
+                  <th style={modalTableHeader}>
+                    Subtotal
+                  </th>
+                </tr>
+              </thead>
+
               <tbody>
-                <tr>
-                  <td style={modalLabelStyle}>
-                    Full Name
-                  </td>
-                  <td style={modalValueStyle}>
-                    {selectedOrder.full_name}
-                  </td>
-                </tr>
+                {selectedOrder.items.map(
+                  (item, index) => (
+                    <tr key={item.product_id || index}>
+                      {/* IMAGE */}
+                      <td style={modalTableCell}>
+                        <img
+                          src={
+                            item.img_url ||
+                            item.image ||
+                            item.mainImage
+                          }
+                          alt={item.name}
+                          style={{
+                            width: 60,
+                            height: 75,
+                            objectFit: "cover",
+                            borderRadius: 7,
+                            border: "1px solid #ddd",
+                          }}
+                        />
+                      </td>
 
-                <tr>
-                  <td style={modalLabelStyle}>Email</td>
-                  <td style={modalValueStyle}>
-                    {selectedOrder.email}
-                  </td>
-                </tr>
+                      {/* PRODUCT */}
+                      <td style={modalTableCell}>
+                        <strong>
+                          {item.name}
+                        </strong>
 
-                <tr>
-                  <td style={modalLabelStyle}>Phone</td>
-                  <td style={modalValueStyle}>
-                    {selectedOrder.phone}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style={modalLabelStyle}>
-                    Address
-                  </td>
-                  <td style={modalValueStyle}>
-                    {selectedOrder.address},{" "}
-                    {selectedOrder.city},{" "}
-                    {selectedOrder.state} -{" "}
-                    {selectedOrder.pin_code}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style={modalLabelStyle}>
-                    Payment Method
-                  </td>
-                  <td style={modalValueStyle}>
-                    {selectedOrder.payment_method}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style={modalLabelStyle}>
-                    Total Amount
-                  </td>
-                  <td style={modalValueStyle}>
-                    <strong>
-                      ₹
-                      {parseFloat(
-                        selectedOrder.total_amount
-                      ).toLocaleString()}
-                    </strong>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td style={modalLabelStyle}>
-                    Payment Status
-                  </td>
-                  <td style={modalValueStyle}>
-                    <span
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: 20,
-                        fontWeight: "bold",
-                        textTransform: "capitalize",
-                        ...getPaymentStatusStyle(
-                          selectedOrder.payment_status
-                        ),
-                      }}
-                    >
-                      {selectedOrder.payment_status ||
-                        "pending"}
-                    </span>
-                  </td>
-                </tr>
-
-                {selectedOrder.payment_submitted_at && (
-                  <tr>
-                    <td style={modalLabelStyle}>
-                      Payment Submitted
-                    </td>
-                    <td style={modalValueStyle}>
-                      {new Date(
-                        selectedOrder.payment_submitted_at
-                      ).toLocaleString()}
-                    </td>
-                  </tr>
-                )}
-
-                {selectedOrder.payment_verified_at && (
-                  <tr>
-                    <td style={modalLabelStyle}>
-                      Payment Verified
-                    </td>
-                    <td style={modalValueStyle}>
-                      {new Date(
-                        selectedOrder.payment_verified_at
-                      ).toLocaleString()}
-                    </td>
-                  </tr>
-                )}
-
-                {selectedOrder.payment_rejected_reason && (
-                  <tr>
-                    <td
-                      style={{
-                        ...modalLabelStyle,
-                        color: "#dc3545",
-                      }}
-                    >
-                      Rejection Reason
-                    </td>
-                    <td
-                      style={{
-                        ...modalValueStyle,
-                        color: "#dc3545",
-                      }}
-                    >
-                      {
-                        selectedOrder.payment_rejected_reason
-                      }
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-
-            {/* =================================
-                PAYMENT SCREENSHOT
-            ================================= */}
-            <h3
-              style={{
-                marginBottom: 12,
-                color: "#063b2a",
-              }}
-            >
-              Payment Screenshot
-            </h3>
-
-            {getPaymentScreenshot(selectedOrder) ? (
-              <div
-                style={{
-                  marginBottom: 25,
-                  textAlign: "center",
-                  background: "#f8f8f8",
-                  padding: 20,
-                  borderRadius: 10,
-                }}
-              >
-                <img
-                  src={getPaymentScreenshot(
-                    selectedOrder
-                  )}
-                  alt="Payment Screenshot"
-                  onClick={() =>
-                    setPreviewImage(
-                      getPaymentScreenshot(
-                        selectedOrder
-                      )
-                    )
-                  }
-                  style={{
-                    maxWidth: 350,
-                    maxHeight: 450,
-                    objectFit: "contain",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    border: "1px solid #ddd",
-                  }}
-                />
-
-                <div style={{ marginTop: 10 }}>
-                  <button
-                    onClick={() =>
-                      setPreviewImage(
-                        getPaymentScreenshot(
-                          selectedOrder
-                        )
-                      )
-                    }
-                    style={{
-                      padding: "8px 18px",
-                      background: "#063b2a",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 6,
-                      cursor: "pointer",
-                    }}
-                  >
-                    View Full Screenshot
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <p
-                style={{
-                  color: "#999",
-                  marginBottom: 25,
-                }}
-              >
-                No payment screenshot uploaded.
-              </p>
-            )}
-
-            {/* =================================
-                PAYMENT ACTIONS
-            ================================= */}
-            {(selectedOrder.payment_status ===
-              "pending" ||
-              selectedOrder.order_status ===
-                "payment_pending") && (
-              <div
-                style={{
-                  display: "flex",
-                  gap: 12,
-                  marginBottom: 25,
-                }}
-              >
-                <button
-                  disabled={
-                    processingPayment ===
-                      selectedOrder.id ||
-                    !getPaymentScreenshot(selectedOrder)
-                  }
-                  onClick={() =>
-                    approvePayment(selectedOrder)
-                  }
-                  style={{
-                    padding: "12px 25px",
-                    background:
-                      processingPayment ===
-                        selectedOrder.id ||
-                      !getPaymentScreenshot(
-                        selectedOrder
-                      )
-                        ? "#aaa"
-                        : "#198754",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 8,
-                    cursor:
-                      processingPayment ===
-                        selectedOrder.id ||
-                      !getPaymentScreenshot(
-                        selectedOrder
-                      )
-                        ? "not-allowed"
-                        : "pointer",
-                    fontWeight: "bold",
-                  }}
-                >
-                  ✓ Approve Payment
-                </button>
-
-                <button
-                  disabled={
-                    processingPayment ===
-                    selectedOrder.id
-                  }
-                  onClick={() =>
-                    rejectPayment(selectedOrder)
-                  }
-                  style={{
-                    padding: "12px 25px",
-                    background:
-                      processingPayment ===
-                      selectedOrder.id
-                        ? "#aaa"
-                        : "#dc3545",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 8,
-                    cursor:
-                      processingPayment ===
-                      selectedOrder.id
-                        ? "not-allowed"
-                        : "pointer",
-                    fontWeight: "bold",
-                  }}
-                >
-                  ✕ Reject Payment
-                </button>
-              </div>
-            )}
-
-            {/* =================================
-                ITEMS
-            ================================= */}
-            <h3
-              style={{
-                marginBottom: 10,
-                color: "#063b2a",
-              }}
-            >
-              Items
-            </h3>
-
-            {selectedOrder.items &&
-            selectedOrder.items.length > 0 ? (
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                }}
-              >
-                <thead
-                  style={{
-                    background: "#f0f0f0",
-                  }}
-                >
-                  <tr>
-                    <th style={thStyleDark}>
-                      Image
-                    </th>
-                    <th style={thStyleDark}>
-                      Product
-                    </th>
-                    <th style={thStyleDark}>
-                      Quantity
-                    </th>
-                    <th style={thStyleDark}>
-                      Price
-                    </th>
-                    <th style={thStyleDark}>
-                      Subtotal
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {selectedOrder.items.map(
-                    (item, index) => (
-                      <tr
-                        key={
-                          item.product_id || index
-                        }
-                      >
-                        <td style={tdStyle}>
-                          <img
-                            src={item.img_url}
-                            alt={item.name}
-                            style={{
-                              width: 70,
-                              height: 90,
-                              objectFit: "cover",
-                              borderRadius: 6,
-                            }}
-                          />
-                        </td>
-
-                        <td style={tdStyle}>
-                          <strong>
-                            {item.name}
-                          </strong>
-
+                        {item.category && (
                           <div
                             style={{
                               fontSize: 11,
                               color: "#777",
-                              marginTop: 3,
+                              marginTop: 4,
                             }}
                           >
                             {item.category}
                           </div>
+                        )}
 
+                        {item.sub_category && (
                           <div
                             style={{
                               fontSize: 11,
                               color: "#777",
+                              marginTop: 2,
                             }}
                           >
                             {item.sub_category}
                           </div>
-                        </td>
+                        )}
 
-                        <td style={tdStyle}>
-                          {item.quantity}
-                        </td>
+                        {/* VARIANT */}
+                        {item.variant &&
+                          typeof item.variant ===
+                            "object" &&
+                          Object.keys(item.variant)
+                            .length > 0 && (
+                            <div
+                              style={{
+                                marginTop: 6,
+                                fontSize: 11,
+                                color: "#555",
+                              }}
+                            >
+                              {item.variant.colour && (
+                                <div>
+                                  Colour:{" "}
+                                  <strong>
+                                    {
+                                      item.variant
+                                        .colour
+                                    }
+                                  </strong>
+                                </div>
+                              )}
 
-                        <td style={tdStyle}>
-                          ₹
-                          {parseFloat(
-                            item.price
-                          ).toLocaleString()}
-                        </td>
+                              {item.variant.size && (
+                                <div>
+                                  Size:{" "}
+                                  <strong>
+                                    {
+                                      item.variant
+                                        .size
+                                    }
+                                  </strong>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                      </td>
 
-                        <td style={tdStyle}>
-                          ₹
-                          {parseFloat(
-                            item.subtotal ||
-                              item.price *
-                                item.quantity
-                          ).toLocaleString()}
-                        </td>
-                      </tr>
-                    )
-                  )}
-                </tbody>
-              </table>
-            ) : (
-              <p>No items</p>
-            )}
+                      {/* QUANTITY */}
+                      <td style={modalTableCell}>
+                        {item.quantity}
+                      </td>
 
-            {/* DELETE */}
-            <button
-              onClick={() =>
-                deleteOrder(selectedOrder.id)
-              }
-              style={{
-                marginTop: 25,
-                padding: "12px 25px",
-                background: "#ff5252",
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                cursor: "pointer",
-                fontWeight: "bold",
-              }}
-            >
-              Delete Order
-            </button>
+                      {/* PRICE */}
+                      <td style={modalTableCell}>
+                        ₹
+                        {parseFloat(
+                          item.price || 0
+                        ).toLocaleString("en-IN")}
+                      </td>
+
+                      {/* SUBTOTAL */}
+                      <td
+                        style={{
+                          ...modalTableCell,
+                          fontWeight: "bold",
+                          color: "#063b2a",
+                        }}
+                      >
+                        ₹
+                        {parseFloat(
+                          item.subtotal ||
+                            Number(item.price || 0) *
+                              Number(
+                                item.quantity || 0
+                              )
+                        ).toLocaleString("en-IN")}
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
           </div>
-        </div>
-      )}
+        ) : (
+          <div
+            style={{
+              padding: 20,
+              textAlign: "center",
+              background: "#f8f8f8",
+              borderRadius: 10,
+              color: "#777",
+              marginBottom: 25,
+            }}
+          >
+            No items found.
+          </div>
+        )}
+
+        {/* ============================
+            DELETE
+        ============================ */}
+
+        <button
+          onClick={() =>
+            deleteOrder(selectedOrder.id)
+          }
+          style={{
+            width: "100%",
+            padding: "12px 20px",
+            background: "#fff",
+            color: "#dc3545",
+            border: "1px solid #dc3545",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
+          Delete Order
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
